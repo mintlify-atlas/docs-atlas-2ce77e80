@@ -1,0 +1,92 @@
+{
+  "projectType": "saas",
+  "projectName": "ZipDrop",
+  "projectDescription": "A lightweight macOS menu bar app for instant file uploads to Cloudflare R2",
+  "theme": "palm",
+  "primaryColor": "#aebd57",
+  "lightColor": "#26272c",
+  "darkColor": "#dbdbdd",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Features",
+            "pages": [
+              "features/drag-and-drop",
+              "features/image-optimization",
+              "features/multi-file-support",
+              "features/demo-mode"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/cloudflare-r2-setup",
+              "configuration/credentials",
+              "configuration/custom-domain"
+            ]
+          },
+          {
+            "group": "Usage Guides",
+            "pages": [
+              "guides/first-upload",
+              "guides/managing-uploads",
+              "guides/keyboard-shortcuts"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Developer Guide",
+            "pages": [
+              "development/getting-started",
+              "development/architecture",
+              "development/building"
+            ]
+          },
+          {
+            "group": "Technical Reference",
+            "pages": [
+              "reference/file-processing",
+              "reference/tauri-commands",
+              "reference/configuration-storage"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Drag & drop file uploads from macOS menu bar",
+    "Automatic WebP image optimization",
+    "Multi-file ZIP archiving",
+    "Cloudflare R2 cloud storage integration",
+    "Demo mode for local file testing",
+    "Secure credential storage via macOS Keychain"
+  ],
+  "publicApiSurface": [
+    "process_and_upload - Main file processing and upload workflow",
+    "set_r2_config - Configure Cloudflare R2 credentials",
+    "get_r2_config - Retrieve current R2 configuration",
+    "validate_r2_config - Test R2 credentials validity",
+    "set_demo_mode - Toggle between demo and production modes",
+    "get_config_status - Get current configuration state",
+    "copy_to_clipboard - Copy text to system clipboard",
+    "reveal_in_finder - Open file location in Finder",
+    "open_in_browser - Open URL in default browser",
+    "delete_from_r2 - Delete file from R2 storage"
+  ]
+}
