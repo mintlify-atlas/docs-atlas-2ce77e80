@@ -1,80 +1,358 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Start uploading files with ZipDrop in 5 minutes
 ---
 
-## Get started in three steps
+# Quick Start Guide
 
-Get your documentation site running locally and make your first customization.
+Get started with ZipDrop in just a few minutes. This guide will walk you through your first upload, both in demo mode and with full R2 cloud storage.
 
-### Step 1: Set up your local environment
+## Step 1: Install ZipDrop
+
+If you haven't installed ZipDrop yet, follow the [installation guide](/installation).
+
+<Check>
+  ZipDrop installed and running with menu bar icon visible
+</Check>
+
+## Step 2: Try Demo Mode
+
+ZipDrop starts in **demo mode** by default, which saves files locally without requiring any cloud configuration. This is perfect for trying out the app!
+
+<Steps>
+  <Step title="Click the menu bar icon">
+    Look for the ZipDrop icon in your macOS menu bar (top-right) and click it.
+    
+    You should see:
+    - A drop zone window
+    - "Demo" badge in the top-right corner
+    - Text saying "Drop files here"
+  </Step>
+  
+  <Step title="Drag and drop a file">
+    Drag an image file from your Desktop or Finder and drop it into the ZipDrop window.
+    
+    <Tip>
+      Try dragging a `.jpg` or `.png` file first to see the WebP conversion in action!
+    </Tip>
+    
+    You'll see:
+    - "Processing..." with a spinner
+    - Then "Saved to Downloads!" on success
+  </Step>
+  
+  <Step title="Check the output">
+    In demo mode, files are saved to `~/Downloads/ZipDrop/`
+    
+    ```bash
+    open ~/Downloads/ZipDrop
+    ```
+    
+    <Note>
+      If you dropped a JPG or PNG, you'll see it was converted to `.webp` format for a smaller file size!
+    </Note>
+  </Step>
+  
+  <Step title="Try multiple files">
+    Drag multiple files at once into ZipDrop. They'll be automatically zipped together!
+    
+    The resulting file will be named something like `archive_a1b2c3d4.zip` in your Downloads folder.
+  </Step>
+</Steps>
+
+### What Files Can You Upload?
+
+ZipDrop supports many file types:
+
+<Tabs>
+  <Tab title="Images">
+    JPG, PNG, GIF, BMP, TIFF, WebP, HEIC, HEIF, SVG, ICO, RAW, CR2, NEF, ARW
+    
+    <Info>
+      Images (except WebP) are automatically converted to WebP format for 30-80% smaller file sizes
+    </Info>
+  </Tab>
+  
+  <Tab title="Documents">
+    PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, CSV, MD, Pages, Numbers, Keynote
+  </Tab>
+  
+  <Tab title="Video & Audio">
+    - **Video**: MOV, MP4, AVI, MKV, WebM, M4V, WMV, FLV, 3GP
+    - **Audio**: MP3, WAV, AAC, FLAC, M4A, OGG, WMA, AIFF
+  </Tab>
+  
+  <Tab title="Archives & Code">
+    - **Archives**: ZIP, TAR, GZ, 7Z, RAR, BZ2, XZ, TGZ
+    - **Code**: JS, TS, JSX, TSX, PY, RS, GO, Swift, Java, C, C++, Ruby, PHP, Shell, YAML, JSON, XML, SQL
+  </Tab>
+</Tabs>
+
+## Step 3: Set Up R2 (Optional)
+
+To upload files to the cloud instead of saving them locally, you'll need to configure Cloudflare R2.
+
+<Warning>
+  You need a Cloudflare account with R2 enabled. R2 offers 10 GB free storage per month.
+</Warning>
+
+### Create R2 Bucket
+
+<Steps>
+  <Step title="Log in to Cloudflare">
+    Go to the [Cloudflare Dashboard](https://dash.cloudflare.com) and log in
+  </Step>
+  
+  <Step title="Navigate to R2">
+    Click **R2** in the left sidebar
+  </Step>
+  
+  <Step title="Create a bucket">
+    Click **Create bucket** and give it a name (e.g., `zipdrop-uploads`)
+    
+    <Tip>
+      Choose a region close to your users for faster uploads and downloads
+    </Tip>
+  </Step>
+  
+  <Step title="Enable public access (optional)">
+    If you want files to be publicly accessible:
+    
+    1. Click on your bucket
+    2. Go to **Settings** → **Public access**
+    3. Click **Allow access** and set up a custom domain or use the R2.dev subdomain
+    
+    <Note>
+      Without public access, you'll need to generate signed URLs for sharing files
+    </Note>
+  </Step>
+</Steps>
+
+### Create API Credentials
+
+<Steps>
+  <Step title="Go to R2 API Tokens">
+    In the Cloudflare dashboard:
+    1. Click **R2** in the sidebar
+    2. Click **Manage R2 API Tokens**
+  </Step>
+  
+  <Step title="Create API token">
+    Click **Create API token**
+  </Step>
+  
+  <Step title="Configure permissions">
+    - **Token name**: "ZipDrop"
+    - **Permissions**: Select **Object Read & Write**
+    - **TTL**: Leave as default (indefinite) or set your preferred expiration
+    - Click **Create API Token**
+  </Step>
+  
+  <Step title="Save credentials">
+    You'll see:
+    - **Access Key ID** - Something like `a1b2c3d4e5f6g7h8i9j0`
+    - **Secret Access Key** - Something like `1a2b3c4d5e6f7g8h9i0j1k2l3m4n5o6p7q8r9s0`
+    
+    <Warning>
+      Save these credentials now! The Secret Access Key is only shown once.
+    </Warning>
+  </Step>
+</Steps>
+
+### Configure ZipDrop
+
+<Steps>
+  <Step title="Open Settings">
+    Click the ZipDrop menu bar icon, then click the **gear icon** (⚙️) in the top-right
+  </Step>
+  
+  <Step title="Disable Demo Mode">
+    Toggle off **Demo Mode** to enable cloud uploads
+    
+    <Info>
+      With demo mode off, the R2 configuration fields become editable
+    </Info>
+  </Step>
+  
+  <Step title="Enter R2 credentials">
+    Fill in the fields:
+    
+    - **Account ID**: Find this in your Cloudflare dashboard (e.g., `abc123def456`)
+    - **Bucket Name**: Your R2 bucket name (e.g., `zipdrop-uploads`)
+    - **Access Key ID**: From Step 4 above
+    - **Secret Access Key**: From Step 4 above
+    - **Public URL Base**: Your bucket's public URL (e.g., `https://files.yourdomain.com` or `https://pub-xyz123.r2.dev`)
+    
+    <Tip>
+      Find your Account ID: Cloudflare Dashboard → R2 → Your bucket → Overview
+    </Tip>
+  </Step>
+  
+  <Step title="Test credentials">
+    Click **Test Credentials** to verify your configuration
+    
+    <Check>
+      You should see "Credentials verified for: your-bucket-name"
+    </Check>
+    
+    If you see an error:
+    - Double-check all fields for typos
+    - Ensure the bucket exists
+    - Verify API token has "Object Read & Write" permissions
+  </Step>
+  
+  <Step title="Save configuration">
+    Click **Save** to store your credentials
+    
+    <Note>
+      Credentials are securely stored in macOS Keychain. Non-secret config is stored in `~/.config/zipdrop/config.json`
+    </Note>
+  </Step>
+</Steps>
+
+## Step 4: Your First Cloud Upload
+
+Now that R2 is configured, let's upload a file to the cloud:
+
+<Steps>
+  <Step title="Ensure demo mode is off">
+    The "Demo" badge should no longer appear in the top-right
+  </Step>
+  
+  <Step title="Drop a file">
+    Drag and drop an image file into ZipDrop
+  </Step>
+  
+  <Step title="Wait for processing">
+    You'll see:
+    - "Processing..." (image conversion if applicable)
+    - Upload progress
+    - "Copied to clipboard!" on success
+  </Step>
+  
+  <Step title="Paste and share">
+    Press `Cmd+V` anywhere to paste the URL. It's already in your clipboard!
+    
+    Example URL: `https://files.yourdomain.com/u/a1b2c3d4_photo.webp`
+  </Step>
+</Steps>
+
+<Check>
+  Your file is now uploaded to R2 and accessible via the URL!
+</Check>
+
+## Usage Tips
 
 <AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
+  <Accordion title="Keyboard shortcuts">
+    - **Esc** - Close the ZipDrop window
+    - **Cmd+V** - Paste the last uploaded URL
   </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+  
+  <Accordion title="File processing behavior">
+    - **Single image** (JPG, PNG, etc.) → Converted to WebP
+    - **Single WebP** → Uploaded as-is (no conversion)
+    - **Multiple files** → Zipped together automatically
+    - **Single non-image** → Uploaded as-is
+  </Accordion>
+  
+  <Accordion title="Recent uploads panel">
+    The bottom half of the window shows your recent uploads:
+    - Click any item to copy its URL/path
+    - Click the link icon to copy
+    - Click the folder icon (demo) or external icon (R2) to open
+    - Click the trash icon to remove from list
+    - **Shift+Click** trash icon on R2 uploads to delete from cloud too!
+  </Accordion>
+  
+  <Accordion title="Switching between demo and cloud mode">
+    You can toggle demo mode on/off in Settings at any time:
+    - **Demo mode ON** - Files save to `~/Downloads/ZipDrop`
+    - **Demo mode OFF** - Files upload to R2
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
+    Your R2 credentials remain saved even when demo mode is on.
   </Accordion>
 </AccordionGroup>
 
-### Step 2: Deploy your changes
+## File Size Limits
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
-
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
-
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 3: Go live
-
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
-
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
+<CardGroup cols={3}>
+  <Card title="Single File" icon="file">
+    **500 MB** maximum per file
+  </Card>
+  <Card title="Total Upload" icon="layer-group">
+    **1 GB** maximum total
+  </Card>
+  <Card title="File Count" icon="hashtag">
+    **50 files** maximum per upload
+  </Card>
 </CardGroup>
 
+## Configuration Files
+
+ZipDrop stores configuration in two places:
+
+### Credentials (Keychain)
+
+```plaintext
+Service: com.metalayer.zipdrop
+Account: r2_credentials
+Stored: Access Key ID + Secret Access Key (JSON)
+```
+
+<Info>
+  View/edit in **Keychain Access** app → Search "zipdrop"
+</Info>
+
+### Settings & Config (Files)
+
+```plaintext
+~/.config/zipdrop/
+├── config.json      # Bucket name, account ID, public URL base
+└── settings.json    # Demo mode, output directory
+```
+
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  Credentials are stored in Keychain (encrypted), while non-sensitive settings are in plain JSON files.
 </Note>
+
+## Troubleshooting
+
+### "Invalid R2 credentials" error
+
+- Verify Access Key ID and Secret Access Key are correct
+- Ensure Account ID matches your Cloudflare account
+- Check that bucket name is spelled correctly
+- Verify API token has "Object Read & Write" permissions
+
+### Upload fails with timeout
+
+- Check your internet connection
+- Try a smaller file first
+- Verify Cloudflare R2 status page for outages
+
+### Files not appearing in R2
+
+- Check the correct bucket in Cloudflare dashboard
+- Look in the `u/` folder (ZipDrop uploads to `u/` prefix)
+- Try the "Test Credentials" button in Settings
+
+### WebP images look wrong
+
+- ZipDrop uses 80% quality for WebP conversion (configurable in future versions)
+- Some images may lose subtle details
+- If quality is critical, use demo mode or upload already-optimized WebP files
+
+## Next Steps
+
+<CardGroup cols={3}>
+  <Card title="Features" icon="sparkles" href="/features/drag-and-drop">
+    Explore all ZipDrop features
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/cloudflare-r2-setup">
+    Advanced configuration options
+  </Card>
+  <Card title="Developer Guide" icon="code" href="/development/getting-started">
+    Developer documentation
+  </Card>
+</CardGroup>

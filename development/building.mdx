@@ -1,0 +1,351 @@
+---
+title: Building for Production
+description: Build, sign, and distribute ZipDrop for macOS
+---
+
+This guide covers building production-ready binaries, code signing, and preparing ZipDrop for distribution.
+
+## Build Commands
+
+### Development Build
+
+For testing without optimizations:
+
+```bash
+pnpm tauri build --debug
+```
+
+This creates a debug build that's faster to compile but larger and slower to run.
+
+### Production Build
+
+For release distribution with full optimizations:
+
+```bash
+pnpm tauri build
+```
+
+This command:
+1. Runs `pnpm build` to compile the React frontend with Vite
+2. Compiles TypeScript to optimized JavaScript
+3. Builds the Rust backend in release mode with optimizations
+4. Creates platform-specific bundles (`.app` and `.dmg`)
+5. Signs the app if signing identity is configured
+
+<Note>
+  The first production build may take 5-10 minutes as Rust compiles all dependencies with optimizations enabled.
+</Note>
+
+## Build Configuration
+
+### Tauri Configuration
+
+**File**: `src-tauri/tauri.conf.json`
+
+```json
+{
+  "build": {
+    "beforeDevCommand": "pnpm dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "pnpm build",
+    "frontendDist": "../dist"
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg"],
+    "category": "public.app-category.utilities",
+    "macOS": {
+      "minimumSystemVersion": "12.0",
+      "signingIdentity": "Developer ID Application: AMOTIVV SOLUTIONS LLC (7DNS64BU7A)"
+    }
+  }
+}
+```
+
+**Key Settings**:
+- **targets**: Creates both `.app` bundle and `.dmg` installer
+- **minimumSystemVersion**: Requires macOS 12.0 (Monterey) or later
+- **signingIdentity**: Apple Developer ID for code signing
+- **category**: App Store category for proper integration
+
+### Package Scripts
+
+**File**: `package.json`
+
+```json
+{
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri"
+  }
+}
+```
+
+## Build Output
+
+### Output Location
+
+After running `pnpm tauri build`, compiled artifacts are located at:
+
+```
+src-tauri/target/release/bundle/
+├── macos/
+│   └── ZipDrop.app              # Application bundle
+└── dmg/
+    └── ZipDrop_1.0.0_aarch64.dmg   # Disk image installer
+```
+
+<Tip>
+  The exact DMG filename includes the version from `tauri.conf.json` and the architecture (`aarch64` for Apple Silicon or `x86_64` for Intel).
+</Tip>
+
+### Bundle Contents
+
+The `.app` bundle contains:
+- **MacOS/ZipDrop** - Compiled Rust binary
+- **Resources/** - Frontend assets (HTML, CSS, JS)
+- **Info.plist** - App metadata and capabilities
+- **Icons.icns** - App icon in multiple resolutions
+- **_CodeSignature/** - Code signing data (if signed)
+
+### File Sizes
+
+Typical build sizes:
+- **App bundle**: ~8-12 MB (compressed)
+- **DMG installer**: ~10-15 MB
+- **Uncompressed**: ~20-30 MB
+
+<Note>
+  Tauri apps are significantly smaller than Electron equivalents because they use the system webview instead of bundling Chromium.
+</Note>
+
+## Code Signing
+
+### Prerequisites
+
+To distribute outside the App Store, you need:
+
+<Steps>
+  <Step title="Apple Developer Account">
+    Sign up at [developer.apple.com](https://developer.apple.com) ($99/year)
+  </Step>
+
+  <Step title="Developer ID Certificate">
+    Create a **Developer ID Application** certificate in Xcode or the developer portal
+  </Step>
+
+  <Step title="Install Certificate">
+    Download and install the certificate in your macOS Keychain
+  </Step>
+</Steps>
+
+### Automatic Signing
+
+Tauri will automatically sign the app if:
+1. A valid `signingIdentity` is set in `tauri.conf.json`
+2. The certificate is installed in your Keychain
+
+```json
+{
+  "bundle": {
+    "macOS": {
+      "signingIdentity": "Developer ID Application: Your Name (TEAM_ID)"
+    }
+  }
+}
+```
+
+### Manual Signing
+
+If automatic signing fails, sign manually:
+
+```bash
+codesign --deep --force --verify --verbose \
+  --sign "Developer ID Application: Your Name" \
+  src-tauri/target/release/bundle/macos/ZipDrop.app
+```
+
+Verify the signature:
+
+```bash
+codesign --verify --deep --strict --verbose=2 \
+  src-tauri/target/release/bundle/macos/ZipDrop.app
+```
+
+### Notarization
+
+For Gatekeeper approval, notarize the app with Apple:
+
+<Steps>
+  <Step title="Create App-Specific Password">
+    Generate at [appleid.apple.com](https://appleid.apple.com)
+  </Step>
+
+  <Step title="Submit for Notarization">
+    ```bash
+    xcrun notarytool submit \
+      src-tauri/target/release/bundle/dmg/ZipDrop_1.0.0_aarch64.dmg \
+      --apple-id your@email.com \
+      --password "app-specific-password" \
+      --team-id TEAM_ID \
+      --wait
+    ```
+  </Step>
+
+  <Step title="Staple Notarization">
+    ```bash
+    xcrun stapler staple \
+      src-tauri/target/release/bundle/dmg/ZipDrop_1.0.0_aarch64.dmg
+    ```
+  </Step>
+</Steps>
+
+<Tip>
+  Notarization typically takes 2-10 minutes. Use `--wait` to block until completion.
+</Tip>
+
+## Distribution
+
+### Direct Distribution
+
+For small-scale distribution:
+
+1. **Upload DMG** to your website or file hosting
+2. **Share the link** with users
+3. Users download and drag to Applications folder
+
+### GitHub Releases
+
+For open-source distribution:
+
+```bash
+# Create a new release
+gh release create v1.0.0 \
+  src-tauri/target/release/bundle/dmg/ZipDrop_1.0.0_aarch64.dmg \
+  --title "ZipDrop v1.0.0" \
+  --notes "Release notes here"
+```
+
+Users can download from the Releases page.
+
+### Homebrew Cask
+
+For easy installation via `brew install --cask zipdrop`:
+
+1. Create a cask formula
+2. Submit PR to [homebrew-cask](https://github.com/Homebrew/homebrew-cask)
+3. After merge, users can install with:
+   ```bash
+   brew install --cask zipdrop
+   ```
+
+## Build Optimization
+
+### Rust Optimization
+
+For smaller binaries, add to `Cargo.toml`:
+
+```toml
+[profile.release]
+opt-level = "z"      # Optimize for size
+lto = true           # Enable link-time optimization
+codegen-units = 1    # Better optimization (slower build)
+strip = true         # Remove debug symbols
+```
+
+### Frontend Optimization
+
+Vite automatically:
+- Minifies JavaScript and CSS
+- Tree-shakes unused code
+- Chunks code for optimal loading
+- Compresses assets
+
+No additional configuration needed.
+
+## Troubleshooting
+
+### Build Fails: "xcrun: error"
+
+**Solution**: Install Xcode Command Line Tools
+```bash
+xcode-select --install
+```
+
+### Build Fails: "No signing identity found"
+
+**Solution**: Either:
+1. Remove `signingIdentity` from `tauri.conf.json` for unsigned builds
+2. Install a valid Developer ID certificate
+
+### DMG Not Created
+
+**Solution**: Check that `"dmg"` is in the `targets` array:
+```json
+{
+  "bundle": {
+    "targets": ["app", "dmg"]
+  }
+}
+```
+
+### Large Binary Size
+
+**Solution**: Ensure you're building in release mode (not `--debug`) and apply Rust optimization flags above.
+
+## CI/CD Integration
+
+### GitHub Actions Example
+
+```yaml
+name: Build Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      
+      - name: Install pnpm
+        run: npm install -g pnpm
+      
+      - name: Setup Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      
+      - name: Install dependencies
+        run: pnpm install
+      
+      - name: Build app
+        run: pnpm tauri build
+      
+      - name: Upload DMG
+        uses: actions/upload-artifact@v3
+        with:
+          name: ZipDrop-dmg
+          path: src-tauri/target/release/bundle/dmg/*.dmg
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="play" href="/development/getting-started">
+    Return to development setup
+  </Card>
+  <Card title="Architecture" icon="building" href="/development/architecture">
+    Understand the codebase structure
+  </Card>
+</CardGroup>

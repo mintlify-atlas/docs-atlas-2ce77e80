@@ -1,0 +1,152 @@
+---
+title: Drag & Drop
+description: Real-time file handling with Tauri event listeners and visual feedback
+---
+
+ZipDrop's drag-and-drop interface provides instant visual feedback and seamless file handling through Tauri's native event system.
+
+## How It Works
+
+The app uses three Tauri event listeners to handle the complete drag-and-drop lifecycle:
+
+### Event Listeners
+
+```typescript
+// Listen for file drop
+listen<TauriDropEvent>("tauri://drag-drop", (event) => {
+  if (event.payload.paths?.length > 0) {
+    processFiles(event.payload.paths);
+  }
+});
+
+// Visual feedback on drag over
+listen("tauri://drag-over", (event) => {
+  if (!isProcessing.current) {
+    setState("drag-over");
+  }
+});
+
+// Reset state on drag leave
+listen("tauri://drag-leave", (event) => {
+  if (!isProcessing.current) {
+    setState("idle");
+  }
+});
+```
+
+These listeners are registered in `App.tsx:272-291` and provide real-time feedback to users.
+
+## Drop Zone States
+
+The drop zone UI adapts to five different states:
+
+| State | Visual | Description |
+|-------|--------|-------------|
+| `idle` | Upload icon | Ready to receive files |
+| `drag-over` | Highlighted | Files hovering over window |
+| `processing` | Spinner | Converting/zipping files |
+| `success` | Checkmark | Upload complete |
+| `error` | Error icon | Validation or upload failed |
+
+<Note>
+The app automatically prevents duplicate processing with debouncing (300ms) and a processing lock to ensure files are only handled once.
+</Note>
+
+## File Validation
+
+When files are dropped, ZipDrop immediately validates them before processing:
+
+```rust
+pub fn validate_files(paths: &[PathBuf]) -> Result<(), ValidationError> {
+    // Check file count
+    if paths.len() > MAX_FILES {
+        return Err(ValidationError {
+            message: format!("Too many files. Maximum is {} files.", MAX_FILES),
+            file: None,
+        });
+    }
+    
+    // Check each file size and extension
+    for path in paths {
+        // Verify file exists
+        // Check it's not a directory
+        // Validate file size < 500MB
+        // Check extension is allowed
+    }
+    
+    // Check total size < 1GB
+    if total_size > MAX_TOTAL_SIZE {
+        return Err(...);
+    }
+}
+```
+
+Validation happens in `processor.rs:58-145` before any processing begins.
+
+## Visual Feedback
+
+The drop zone provides instant visual feedback:
+
+```tsx
+<div className={`drop-zone ${state}`}>
+  {state === "processing" ? (
+    <>
+      <div className="drop-icon spinning"><SpinnerIcon /></div>
+      <div className="drop-text">Processing...</div>
+      <div className="drop-subtext">{currentFileName}</div>
+    </>
+  ) : state === "drag-over" ? (
+    <>
+      <div className="drop-icon"><UploadIcon /></div>
+      <div className="drop-text">Drop to upload</div>
+    </>
+  ) : (
+    // Idle state
+  )}
+</div>
+```
+
+<Tip>
+The window automatically hides after 10 seconds of successful upload, keeping your workspace clean.
+</Tip>
+
+## Error Handling
+
+If validation fails, users see a clear error message:
+
+```typescript
+if (!validation.valid) {
+  setState("error");
+  setStatusText(validation.error!);
+  setTimeout(() => {
+    setState("idle");
+    setStatusText("");
+  }, 3000);
+}
+```
+
+Errors automatically clear after 3 seconds, returning the UI to the idle state.
+
+## Debouncing
+
+To prevent duplicate processing from multiple drop events:
+
+```typescript
+const DEBOUNCE_MS = 300;
+const lastDropTime = useRef(0);
+
+const processFiles = async (paths: string[]) => {
+  const now = Date.now();
+  if (now - lastDropTime.current < DEBOUNCE_MS) {
+    return; // Ignore duplicate
+  }
+  lastDropTime.current = now;
+  // ... continue processing
+};
+```
+
+This ensures smooth operation even if macOS fires multiple events for a single drop.
+
+<Warning>
+Directories are not supported. If you need to upload a folder, compress it into a ZIP file first.
+</Warning>

@@ -1,97 +1,217 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "ZipDrop Documentation"
+description: "Instant file uploads from your macOS menu bar to Cloudflare R2"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden dark:bg-[#0f1117] bg-white py-20">
+  <div className="max-w-7xl mx-auto px-6 lg:px-8">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+      <div className="lg:col-span-7">
+        <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold dark:text-gray-100 text-gray-900 mb-6">
+          Instant File Uploads from Your Menu Bar
+        </h1>
+        <p className="text-base sm:text-lg dark:text-gray-400 text-gray-600 mb-8 max-w-2xl">
+          ZipDrop is a lightweight macOS app that makes file sharing effortless. Drop files onto your menu bar, and get a shareable URL instantly. Images are auto-optimized, and multiple files are zipped together automatically.
+        </p>
+        <div className="flex flex-wrap gap-4">
+          <a 
+            href="/quickstart" 
+            className="inline-flex items-center px-6 py-3 rounded-lg font-semibold text-white transition-colors"
+            style={{ backgroundColor: '#aebd57' }}
+          >
+            Get Started
+            <svg className="ml-2 w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+            </svg>
+          </a>
+          <a 
+            href="/features/drag-and-drop" 
+            className="inline-flex items-center px-6 py-3 rounded-lg font-semibold dark:text-gray-100 text-gray-900 dark:bg-white/10 bg-gray-100 dark:hover:bg-white/20 hover:bg-gray-200 transition-colors border dark:border-white/20 border-gray-300"
+          >
+            Explore Features
+          </a>
+        </div>
+      </div>
+      <div className="lg:col-span-5 hidden lg:block">
+        <div className="relative dark:bg-[#1a1d27] bg-gray-50 rounded-2xl p-8 dark:border-[#27272a] border-gray-200 border shadow-xl">
+          <div className="space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#aebd57' }}>
+                <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold dark:text-gray-100 text-gray-900">Drop Files</div>
+                <div className="text-sm dark:text-gray-400 text-gray-600">Drag & drop to upload</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 opacity-75">
+              <div className="w-12 h-12 rounded-lg dark:bg-[#242838] bg-gray-200 flex items-center justify-center">
+                <svg className="w-6 h-6 dark:text-gray-400 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold dark:text-gray-100 text-gray-900">Auto-Optimize</div>
+                <div className="text-sm dark:text-gray-400 text-gray-600">Images → WebP</div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3 opacity-50">
+              <div className="w-12 h-12 rounded-lg dark:bg-[#242838] bg-gray-200 flex items-center justify-center">
+                <svg className="w-6 h-6 dark:text-gray-400 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div>
+                <div className="font-semibold dark:text-gray-100 text-gray-900">Get URL</div>
+                <div className="text-sm dark:text-gray-400 text-gray-600">Copied to clipboard</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-gray-100 text-gray-900 mb-4">Quick Start</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Get ZipDrop running in minutes</p>
+  
+  <Steps>
+    <Step title="Download and Install">
+      Download the latest version from GitHub and move ZipDrop to your Applications folder. Launch the app and you'll see the ZipDrop icon in your menu bar.
+      
+      <CodeGroup>
+      ```bash Homebrew
+      brew install --cask zipdrop
+      ```
+      
+      ```bash Manual Download
+      # Download from GitHub releases
+      # https://github.com/theforkproject-dev/zipdrop/releases
+      ```
+      </CodeGroup>
+    </Step>
+    
+    <Step title="Try Demo Mode">
+      ZipDrop starts in demo mode by default. Click the menu bar icon and drop a file to test it out. Files are saved locally to `~/Downloads/ZipDrop`.
+      
+      <Note>Demo mode is perfect for trying ZipDrop without cloud setup. Files stay on your Mac.</Note>
+    </Step>
+    
+    <Step title="Configure Cloudflare R2 (Optional)">
+      To upload files to the cloud, open Settings and enter your Cloudflare R2 credentials. Test your credentials, then save.
+      
+      ```json Example R2 Config
+      {
+        "account_id": "your-cloudflare-account-id",
+        "bucket_name": "my-zipdrop-bucket",
+        "access_key": "your-r2-access-key",
+        "secret_key": "your-r2-secret-key",
+        "public_url_base": "https://files.yourdomain.com"
+      }
+      ```
+      
+      <Tip>Need help with R2 setup? Check out our [Cloudflare R2 Setup Guide](/configuration/cloudflare-r2-setup)</Tip>
+    </Step>
+    
+    <Step title="Upload Your First File">
+      Click the ZipDrop icon, drag a file into the drop zone, and the public URL is instantly copied to your clipboard. Share it anywhere!
+    </Step>
+  </Steps>
+</div>
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-gray-100 text-gray-900 mb-4">Core Features</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Everything you need for effortless file sharing</p>
+  
+  <CardGroup cols={2}>
+    <Card title="Drag & Drop Uploads" icon="hand-pointer" href="/features/drag-and-drop">
+      Drop files onto your menu bar icon for instant uploads. No need to open the app or navigate dialogs.
+    </Card>
+    <Card title="Auto Image Optimization" icon="image" href="/features/image-optimization">
+      Images are automatically converted to WebP format with 80% quality, reducing file sizes by up to 70%.
+    </Card>
+    <Card title="Multi-File ZIP" icon="file-zipper" href="/features/multi-file-support">
+      Drop multiple files at once and they're automatically zipped together with a unique name.
+    </Card>
+    <Card title="Demo Mode" icon="vial" href="/features/demo-mode">
+      Test ZipDrop locally without cloud setup. Files are saved to your Downloads folder.
+    </Card>
+    <Card title="Secure Credentials" icon="lock" href="/configuration/credentials">
+      R2 credentials are stored securely in macOS Keychain, never in plain text files.
+    </Card>
+    <Card title="Custom Domains" icon="globe" href="/configuration/custom-domain">
+      Use your own domain for shareable URLs instead of Cloudflare's default R2 URLs.
+    </Card>
+  </CardGroup>
+</div>
 
-## Make it yours
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-2xl sm:text-3xl font-semibold dark:text-gray-100 text-gray-900 mb-4">Learn More</h2>
+  <p className="text-base dark:text-gray-400 text-gray-600 mb-8">Dive deeper into ZipDrop's capabilities</p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <a 
+      href="/guides/first-upload" 
+      className="group block rounded-2xl dark:bg-[#1a1d27] bg-gray-50 dark:border-[#27272a] border-gray-200 border dark:hover:border-[#aebd57] hover:border-[#aebd57] overflow-hidden transition-colors no-underline"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold dark:text-gray-100 text-gray-900 mb-2">Usage Guides</h3>
+        <p className="text-sm dark:text-gray-400 text-gray-600 mb-4">Step-by-step tutorials for common workflows and managing your uploads.</p>
+        <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#aebd57' }}>
+          View Guides
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+    
+    <a 
+      href="/development/getting-started" 
+      className="group block rounded-2xl dark:bg-[#1a1d27] bg-gray-50 dark:border-[#27272a] border-gray-200 border dark:hover:border-[#aebd57] hover:border-[#aebd57] overflow-hidden transition-colors no-underline"
+    >
+      <div className="p-6">
+        <h3 className="text-base font-semibold dark:text-gray-100 text-gray-900 mb-2">Development Guide</h3>
+        <p className="text-sm dark:text-gray-400 text-gray-600 mb-4">Build and customize ZipDrop. Learn about the Tauri architecture and API reference.</p>
+        <div className="flex items-center gap-2 text-sm font-medium" style={{ color: '#aebd57' }}>
+          Start Building
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+          </svg>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
 
-Design a docs site that looks great and empowers your users.
-
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
-
-## Create beautiful pages
-
-Everything you need to create world-class documentation.
-
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
-
-## Need inspiration?
-
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="rounded-2xl dark:bg-[#1a1d27] bg-gray-50 dark:border-[#27272a] border-gray-200 border p-8 sm:p-12 text-center">
+    <h2 className="text-2xl sm:text-3xl font-semibold dark:text-gray-100 text-gray-900 mb-4">Ready to Start?</h2>
+    <p className="text-base dark:text-gray-400 text-gray-600 mb-8 max-w-2xl mx-auto">
+      Install ZipDrop and start sharing files in seconds. No account required for demo mode.
+    </p>
+    <div className="flex flex-col sm:flex-row gap-4 justify-center">
+      <a 
+        href="/installation" 
+        className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold text-white transition-colors"
+        style={{ backgroundColor: '#aebd57' }}
+      >
+        Install ZipDrop
+      </a>
+      <a 
+        href="https://github.com/theforkproject-dev/zipdrop" 
+        className="inline-flex items-center justify-center px-6 py-3 rounded-lg font-semibold dark:text-gray-100 text-gray-900 dark:bg-white/10 bg-gray-100 dark:hover:bg-white/20 hover:bg-gray-200 transition-colors border dark:border-white/20 border-gray-300"
+      >
+        <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 24 24">
+          <path fillRule="evenodd" d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.531 1.032 1.531 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z" clipRule="evenodd" />
+        </svg>
+        View on GitHub
+      </a>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,412 @@
+---
+title: Configuration Storage
+description: Technical reference for configuration management, Keychain integration, and persistent storage
+---
+
+ZipDrop stores configuration securely using macOS Keychain for secrets and JSON files for non-sensitive data.
+
+## Constants
+
+```rust
+const SERVICE_NAME: &str = "com.metalayer.zipdrop";
+```
+
+Service identifier used for all Keychain operations.
+
+## Data Structures
+
+### R2Config
+
+Complete R2 configuration structure containing both secrets and non-secrets.
+
+```rust
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+pub struct R2Config {
+    pub access_key: String,
+    pub secret_key: String,
+    pub bucket_name: String,
+    pub account_id: String,
+    pub public_url_base: String,
+}
+```
+
+<ParamField path="access_key" type="String" required>
+  R2 access key ID (stored in Keychain)
+</ParamField>
+
+<ParamField path="secret_key" type="String" required>
+  R2 secret access key (stored in Keychain)
+</ParamField>
+
+<ParamField path="bucket_name" type="String" required>
+  R2 bucket name (stored in file)
+</ParamField>
+
+<ParamField path="account_id" type="String" required>
+  Cloudflare account ID (stored in file)
+</ParamField>
+
+<ParamField path="public_url_base" type="String" required>
+  Base URL for public file access, e.g., `https://files.example.com` (stored in file)
+</ParamField>
+
+### AppSettings
+
+Application settings stored in JSON file.
+
+```rust
+#[derive(Debug, Clone, Deserialize, Serialize)]
+pub struct AppSettings {
+    #[serde(default = "default_demo_mode")]
+    pub demo_mode: bool,
+    pub demo_output_dir: Option<String>,
+}
+```
+
+<ParamField path="demo_mode" type="bool" required>
+  Whether demo mode is enabled (defaults to `true`)
+</ParamField>
+
+<ParamField path="demo_output_dir" type="Option<String>">
+  Custom output directory for demo mode (defaults to `Downloads/ZipDrop`)
+</ParamField>
+
+**Default Values**:
+
+```rust
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            demo_mode: true,
+            demo_output_dir: None,
+        }
+    }
+}
+```
+
+## Internal Structures
+
+### StoredConfig
+
+Non-secret configuration stored in `config.json`.
+
+```rust
+#[derive(Debug, Clone, Deserialize, Serialize, Default)]
+struct StoredConfig {
+    bucket_name: String,
+    account_id: String,
+    public_url_base: String,
+}
+```
+
+### KeychainSecrets
+
+Secrets stored as a single JSON blob in Keychain to minimize user prompts.
+
+```rust
+#[derive(Debug, Clone, Deserialize, Serialize)]
+struct KeychainSecrets {
+    access_key: String,
+    secret_key: String,
+}
+```
+
+<Note>
+  By storing both secrets in a single Keychain entry, users only see one permission prompt instead of two.
+</Note>
+
+## File Locations
+
+### get_config_dir
+
+Returns the configuration directory path, creating it if necessary.
+
+```rust
+fn get_config_dir() -> Result<PathBuf, String>
+```
+
+**Path**: `~/Library/Application Support/zipdrop/`
+
+**Returns**: `Result<PathBuf, String>`
+
+### get_config_path
+
+Returns the path to the R2 configuration file.
+
+```rust
+fn get_config_path() -> Result<PathBuf, String>
+```
+
+**Path**: `~/Library/Application Support/zipdrop/config.json`
+
+### get_settings_path
+
+Returns the path to the app settings file.
+
+```rust
+fn get_settings_path() -> Result<PathBuf, String>
+```
+
+**Path**: `~/Library/Application Support/zipdrop/settings.json`
+
+### get_demo_output_dir
+
+Returns the demo mode output directory, creating it if necessary.
+
+```rust
+pub fn get_demo_output_dir() -> Result<PathBuf, String>
+```
+
+**Path**: `~/Downloads/ZipDrop/`
+
+**Returns**: `Result<PathBuf, String>`
+
+**Fallback**: Uses home directory if Downloads folder cannot be found.
+
+## R2 Configuration Functions
+
+### save_r2_config
+
+Saves R2 configuration, splitting secrets (Keychain) from non-secrets (file).
+
+```rust
+pub fn save_r2_config(config: &R2Config) -> Result<(), String>
+```
+
+<ParamField path="config" type="&R2Config" required>
+  Complete R2 configuration to save
+</ParamField>
+
+**Returns**: `Result<(), String>`
+
+**Storage Strategy**:
+
+<Expandable title="Keychain (Secrets)">
+  **Entry name**: `r2_credentials`
+  
+  **Format**: JSON blob containing both `access_key` and `secret_key`
+  
+  **Service**: `com.metalayer.zipdrop`
+  
+  This ensures only one macOS permission prompt for both secrets.
+</Expandable>
+
+<Expandable title="File (Non-Secrets)">
+  **Path**: `~/Library/Application Support/zipdrop/config.json`
+  
+  **Format**: JSON with `bucket_name`, `account_id`, `public_url_base`
+  
+  **Permissions**: Standard user file permissions
+</Expandable>
+
+**Example `config.json`**:
+
+```json
+{
+  "bucket_name": "my-uploads",
+  "account_id": "abc123def456",
+  "public_url_base": "https://files.example.com"
+}
+```
+
+### load_r2_config
+
+Loads R2 configuration by combining Keychain secrets with file data.
+
+```rust
+pub fn load_r2_config() -> Result<Option<R2Config>, String>
+```
+
+**Returns**: `Result<Option<R2Config>, String>`
+- `Ok(Some(config))` - Configuration loaded successfully
+- `Ok(None)` - No configuration found or incomplete
+- `Err(String)` - Error reading configuration
+
+**Loading Process**:
+
+1. Check if `config.json` exists (if not, return `None`)
+2. Load non-secrets from `config.json`
+3. Load secrets from Keychain entry `r2_credentials`
+4. Validate that both secrets are non-empty
+5. Combine into complete `R2Config`
+
+**Error Cases**:
+
+- Config file doesn't exist: Returns `Ok(None)`
+- Keychain secrets missing: Returns `Ok(None)`
+- Keychain secrets empty: Returns `Ok(None)`
+- File read error: Returns `Err("Failed to read config file: ...")`
+- JSON parse error: Returns `Err("Failed to parse config: ...")`
+
+### delete_r2_config
+
+Deletes all R2 configuration data from Keychain and filesystem.
+
+```rust
+pub fn delete_r2_config() -> Result<(), String>
+```
+
+**Returns**: `Result<(), String>`
+
+**Cleanup Actions**:
+
+1. Deletes Keychain entry `r2_credentials` (current format)
+2. Deletes legacy Keychain entries `r2_access_key` and `r2_secret_key` (migration cleanup)
+3. Deletes `config.json` file if it exists
+
+<Note>
+  This function gracefully handles missing entries and files, only returning errors for actual I/O failures.
+</Note>
+
+## Settings Functions
+
+### save_settings
+
+Saves app settings to JSON file.
+
+```rust
+pub fn save_settings(settings: &AppSettings) -> Result<(), String>
+```
+
+<ParamField path="settings" type="&AppSettings" required>
+  App settings to save
+</ParamField>
+
+**Returns**: `Result<(), String>`
+
+**Example `settings.json`**:
+
+```json
+{
+  "demo_mode": true,
+  "demo_output_dir": null
+}
+```
+
+### load_settings
+
+Loads app settings from JSON file, returning defaults if file doesn't exist.
+
+```rust
+pub fn load_settings() -> Result<AppSettings, String>
+```
+
+**Returns**: `Result<AppSettings, String>`
+
+**Behavior**:
+- If `settings.json` doesn't exist: Returns `AppSettings::default()` (demo mode enabled)
+- If file exists but is invalid: Returns error
+- If file exists and is valid: Returns loaded settings
+
+## Keychain Migration
+
+### migrate_keychain_entries
+
+One-time migration to clean up old two-entry Keychain format.
+
+```rust
+pub fn migrate_keychain_entries()
+```
+
+**Migration Process**:
+
+1. Checks for migration marker file (`.migrated_v1`)
+2. If already migrated, returns immediately
+3. Attempts to delete old entries: `r2_access_key` and `r2_secret_key`
+4. Creates marker file to prevent future runs
+
+**Old Format** (deprecated):
+- Entry 1: `r2_access_key` → access key only
+- Entry 2: `r2_secret_key` → secret key only
+- **Problem**: Two macOS permission prompts
+
+**New Format**:
+- Entry: `r2_credentials` → JSON with both keys
+- **Benefit**: Single macOS permission prompt
+
+<Warning>
+  This migration runs automatically on app startup. Users with existing configurations may see one permission prompt to delete old entries.
+</Warning>
+
+## Error Handling Patterns
+
+All configuration functions follow consistent error handling:
+
+<CodeGroup>
+```rust File I/O Errors
+fs::write(&config_path, json)
+    .map_err(|e| format!("Failed to write config file: {}", e))?;
+```
+
+```rust JSON Serialization Errors
+serde_json::to_string_pretty(&stored)
+    .map_err(|e| format!("Failed to serialize config: {}", e))?;
+```
+
+```rust Keychain Errors
+Entry::new(SERVICE_NAME, "r2_credentials")
+    .map_err(|e| format!("Keychain error creating credentials entry: {}", e))?;
+```
+</CodeGroup>
+
+## Security Considerations
+
+<Expandable title="Keychain Access">
+  - Secrets stored in macOS Keychain use system encryption
+  - Access requires user permission (first time only)
+  - Secrets never written to disk in plain text
+  - Combined entry reduces permission prompts from 2 to 1
+</Expandable>
+
+<Expandable title="File Permissions">
+  - Config directory: `~/Library/Application Support/zipdrop/`
+  - Files inherit standard user permissions (readable only by user)
+  - No sensitive data stored in JSON files
+</Expandable>
+
+<Expandable title="Migration Safety">
+  - Old Keychain entries automatically cleaned up
+  - Marker file prevents repeated cleanup attempts
+  - Errors during cleanup are logged but don't block app startup
+</Expandable>
+
+## Usage Example
+
+<CodeGroup>
+```rust Save Configuration
+use config::{save_r2_config, R2Config};
+
+let config = R2Config {
+    access_key: "your-access-key".to_string(),
+    secret_key: "your-secret-key".to_string(),
+    bucket_name: "my-bucket".to_string(),
+    account_id: "abc123".to_string(),
+    public_url_base: "https://files.example.com".to_string(),
+};
+
+save_r2_config(&config)?;
+// Keychain: {"access_key": "...", "secret_key": "..."}
+// File: {"bucket_name": "...", "account_id": "...", "public_url_base": "..."}
+```
+
+```rust Load Configuration
+use config::load_r2_config;
+
+match load_r2_config()? {
+    Some(config) => {
+        println!("Bucket: {}", config.bucket_name);
+        // Use config.access_key, config.secret_key for R2 operations
+    }
+    None => {
+        println!("No R2 configuration found");
+    }
+}
+```
+
+```rust Delete Configuration
+use config::delete_r2_config;
+
+delete_r2_config()?;
+// Removes all Keychain entries and config.json
+```
+</CodeGroup>

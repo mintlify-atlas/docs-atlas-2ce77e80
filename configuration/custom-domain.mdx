@@ -1,0 +1,304 @@
+---
+title: 'Custom Domain Setup'
+description: 'Configure a custom domain for your R2 bucket to create branded upload URLs'
+---
+
+By default, Cloudflare R2 provides a generic public URL for your files. Setting up a custom domain lets you create branded, professional-looking upload URLs.
+
+## Why Use a Custom Domain?
+
+Without a custom domain, your files will have URLs like:
+```
+https://pub-abc123.r2.dev/u/file.jpg
+```
+
+With a custom domain, you can create URLs like:
+```
+https://files.yourdomain.com/u/file.jpg
+```
+
+Benefits:
+- **Professional branding** - Use your own domain name
+- **Shorter URLs** - Easier to share and remember
+- **Custom SSL** - Cloudflare provides free SSL certificates
+- **Better control** - Set custom headers, caching rules, etc.
+
+## Prerequisites
+
+- A domain managed by Cloudflare (or transferable to Cloudflare)
+- An R2 bucket already created (see [R2 Setup](/configuration/cloudflare-r2-setup))
+- Access to your domain's DNS settings
+
+## Step 1: Connect a Domain to Your R2 Bucket
+
+<Steps>
+  <Step title="Navigate to your R2 bucket">
+    1. Log in to the [Cloudflare Dashboard](https://dash.cloudflare.com)
+    2. Click **R2** in the sidebar
+    3. Select your bucket (e.g., `zipdrop-uploads`)
+    4. Go to the **Settings** tab
+  </Step>
+
+  <Step title="Add a custom domain">
+    1. Scroll to the **Public access** section
+    2. Click **Connect domain**
+    3. Enter your desired subdomain (e.g., `files.yourdomain.com`)
+    4. Click **Continue**
+    
+    <Note>
+      You can use any subdomain. Common choices: `files`, `cdn`, `uploads`, `static`, `media`
+    </Note>
+  </Step>
+
+  <Step title="Cloudflare configures DNS automatically">
+    Cloudflare will:
+    
+    - Create a CNAME record pointing to your R2 bucket
+    - Issue an SSL certificate for the subdomain
+    - Configure caching and delivery rules
+    
+    This process usually takes **1-5 minutes**.
+  </Step>
+
+  <Step title="Verify the domain is active">
+    Once connected, you'll see your custom domain listed under **Public access** with a green "Active" status.
+    
+    Test it by visiting:
+    ```
+    https://files.yourdomain.com
+    ```
+    
+    You should see an "Access Denied" or "Bucket Empty" message (this is normal - it means the domain is working).
+  </Step>
+</Steps>
+
+## Step 2: Configure ZipDrop to Use Your Custom Domain
+
+Once your custom domain is active, update ZipDrop's configuration:
+
+<Steps>
+  <Step title="Open ZipDrop settings">
+    1. Click the ZipDrop icon in the menu bar
+    2. Click the **settings icon** (gear)
+  </Step>
+
+  <Step title="Update Public URL Base">
+    In the **Public URL Base** field, enter your custom domain:
+    
+    <CodeGroup>
+    ```text Custom Domain
+    https://files.yourdomain.com
+    ```
+    
+    ```text With Path Prefix (optional)
+    https://files.yourdomain.com/uploads
+    ```
+    </CodeGroup>
+    
+    <Warning>
+      - Do **not** include a trailing slash (`/`)
+      - Use `https://` (not `http://`)
+      - Include any path prefix if you want files organized in subdirectories
+    </Warning>
+  </Step>
+
+  <Step title="Save and test">
+    1. Click **Save Configuration**
+    2. Upload a test file by dragging it to ZipDrop
+    3. The generated URL should now use your custom domain
+  </Step>
+</Steps>
+
+## How ZipDrop Generates URLs
+
+When you upload a file, ZipDrop constructs the public URL by combining:
+
+1. **Public URL Base** (from your configuration)
+2. **Object Key** (generated automatically)
+
+From `uploader.rs:215-217`:
+```rust
+let public_url = format!(
+    "{}/{}",
+    config.public_url_base.trim_end_matches('/'),
+    key
+);
+```
+
+### Object Key Format
+
+ZipDrop generates unique, SEO-friendly keys for uploaded files (`uploader.rs:141-164`):
+
+```rust
+// Generate unique key with original extension
+let ext = file_path
+    .extension()
+    .and_then(|e| e.to_str())
+    .unwrap_or("bin");
+let unique_id = Uuid::new_v4().to_string()[..8].to_string();
+let original_name = file_path
+    .file_stem()
+    .and_then(|s| s.to_str())
+    .unwrap_or("file");
+
+// Sanitize filename (remove spaces, special chars)
+let safe_name: String = original_name
+    .chars()
+    .map(|c| {
+        if c.is_alphanumeric() || c == '-' || c == '_' {
+            c
+        } else {
+            '_'
+        }
+    })
+    .collect();
+
+let key = format!("u/{}_{}.{}", unique_id, safe_name, ext);
+```
+
+**Example**: Uploading `My Vacation Photo.jpg` generates:
+```
+u/a1b2c3d4_My_Vacation_Photo.jpg
+```
+
+**Full URL** (with custom domain):
+```
+https://files.yourdomain.com/u/a1b2c3d4_My_Vacation_Photo.jpg
+```
+
+## Configuration Examples
+
+### Example 1: Simple Subdomain
+
+**Custom Domain**: `files.example.com`
+
+**ZipDrop Config**:
+```json
+{
+  "public_url_base": "https://files.example.com"
+}
+```
+
+**Generated URL**:
+```
+https://files.example.com/u/a1b2c3d4_screenshot.png
+```
+
+### Example 2: Subdomain with Path Prefix
+
+**Custom Domain**: `cdn.example.com`
+
+**ZipDrop Config**:
+```json
+{
+  "public_url_base": "https://cdn.example.com/zipdrop"
+}
+```
+
+**Generated URL**:
+```
+https://cdn.example.com/zipdrop/u/a1b2c3d4_document.pdf
+```
+
+<Note>
+  Path prefixes are **optional**. They're useful if you're sharing an R2 bucket with multiple applications.
+</Note>
+
+### Example 3: Using R2.dev Public URL
+
+If you don't have a custom domain, you can use Cloudflare's built-in R2 public URL:
+
+**ZipDrop Config**:
+```json
+{
+  "public_url_base": "https://pub-abc123def456.r2.dev"
+}
+```
+
+<Warning>
+  R2.dev URLs are **auto-generated** and cannot be customized. They're less professional than custom domains.
+</Warning>
+
+## Advanced: Custom Headers and Caching
+
+With a custom domain, you can configure advanced delivery settings:
+
+### Cache Rules
+
+1. In the Cloudflare Dashboard, go to **Caching** → **Cache Rules**
+2. Create a rule for your subdomain:
+   - **If**: Hostname equals `files.yourdomain.com`
+   - **Then**: Cache everything with TTL of 1 month
+
+### Transform Rules
+
+Add custom headers to all uploaded files:
+
+1. Go to **Rules** → **Transform Rules**
+2. Create a rule:
+   - **If**: Hostname equals `files.yourdomain.com`
+   - **Then**: Set headers:
+     - `Access-Control-Allow-Origin: *` (for CORS)
+     - `Cache-Control: public, max-age=31536000` (for long-term caching)
+
+### Hotlink Protection
+
+Prevent other sites from embedding your files:
+
+1. Go to **Scrape Shield** → **Hotlink Protection**
+2. Enable for your domain
+3. Add allowed domains to the allowlist
+
+## Troubleshooting
+
+### "Domain not active" after setup
+
+- Wait 5-10 minutes for DNS propagation
+- Check that your domain is on Cloudflare (orange cloud enabled)
+- Verify the CNAME record was created correctly in **DNS** → **Records**
+
+### Files return 404 errors
+
+- Verify the Public URL Base in ZipDrop matches your custom domain exactly
+- Ensure there's no trailing slash in the Public URL Base
+- Check that the bucket is connected to the domain in R2 settings
+
+### SSL certificate errors
+
+- Wait for Cloudflare to issue the SSL certificate (can take up to 24 hours)
+- Ensure SSL/TLS encryption mode is set to **Full** or **Full (strict)** in Cloudflare
+- Check that the domain is proxied through Cloudflare (orange cloud, not gray)
+
+### Mixed content warnings
+
+- Always use `https://` in your Public URL Base
+- Ensure Cloudflare's SSL/TLS mode is **Full** or higher
+- Check that your website is also served over HTTPS
+
+## Storage Location in Config
+
+The Public URL Base is stored in the config file at `~/Library/Application Support/zipdrop/config.json`:
+
+```json
+{
+  "bucket_name": "zipdrop-uploads",
+  "account_id": "abc123...",
+  "public_url_base": "https://files.yourdomain.com"
+}
+```
+
+See the [Credential Storage](/configuration/credentials) guide for details on how configuration is persisted.
+
+## Next Steps
+
+- [Learn about credential security](/configuration/credentials)
+- [Understand how uploads work](/features/upload-process)
+- [Explore demo mode](/features/demo-mode) for testing
+
+## Best Practices
+
+- **Use a dedicated subdomain** (e.g., `files`, `cdn`) instead of your root domain
+- **Enable HTTPS** - Cloudflare provides free SSL certificates
+- **Set up cache rules** to improve delivery speed and reduce costs
+- **Monitor usage** in the R2 analytics dashboard to track bandwidth and storage
+- **Consider CDN regions** - Cloudflare's global network ensures fast delivery worldwide

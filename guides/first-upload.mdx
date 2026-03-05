@@ -1,0 +1,159 @@
+---
+title: Your First Upload
+description: Step-by-step guide to uploading your first file with ZipDrop
+---
+
+## Getting Started
+
+ZipDrop lives in your macOS menu bar and processes files instantly. Here's how to upload your first file.
+
+<Steps>
+  <Step title="Click the ZipDrop menu bar icon">
+    The ZipDrop window will appear directly below the menu bar icon, positioned for easy access.
+  </Step>
+
+  <Step title="Drag and drop your file">
+    Drag any supported file from Finder onto the drop zone. You'll see visual feedback:
+    - **Drag over**: The drop zone highlights with "Drop to upload"
+    - **Processing**: A spinner appears with the filename
+    - **Success**: A checkmark with confirmation message
+  </Step>
+
+  <Step title="Your file is ready">
+    ZipDrop automatically copies the URL to your clipboard. Just paste it anywhere!
+    
+    <Note>
+    In demo mode, files are saved to your Downloads folder and the local path is copied instead.
+    </Note>
+  </Step>
+</Steps>
+
+## What Happens During Processing
+
+ZipDrop intelligently processes files based on type and quantity:
+
+### Single Image Files
+
+When you upload a single image (JPG, PNG, GIF, BMP, or TIFF), ZipDrop:
+
+1. **Converts to WebP** format at 80% quality
+2. **Optimizes file size** while maintaining visual quality
+3. **Generates a unique filename** (e.g., `photo_a1b2c3d4.webp`)
+4. **Uploads to R2** (or saves locally in demo mode)
+
+<Tip>
+WebP files uploaded already? They pass through unchanged to avoid double-compression.
+</Tip>
+
+### Multiple Files
+
+When you drop multiple files (up to 50), ZipDrop:
+
+1. **Creates a ZIP archive** with all files
+2. **Compresses with Deflate** method
+3. **Preserves original filenames** inside the archive
+4. **Names it** `archive_a1b2c3d4.zip`
+5. **Uploads the single ZIP** file
+
+### Other File Types
+
+For non-image files (PDFs, videos, documents, etc.), ZipDrop:
+
+1. **Copies the file** with a unique suffix
+2. **Preserves the original extension** (e.g., `document_a1b2c3d4.pdf`)
+3. **Uploads without modification**
+
+## File Validation
+
+Before processing, ZipDrop validates your files:
+
+- **Maximum 50 files** per upload
+- **Maximum 500 MB** per individual file
+- **Maximum 1 GB** total size
+- **Supported extensions** only (see [supported file types](/quickstart#supported-file-types))
+- **No directories** - ZIP folders first
+
+If validation fails, you'll see a clear error message for 3 seconds.
+
+## Clipboard Behavior
+
+<Card title="Automatic Clipboard Copy" icon="clipboard">
+  After successful upload, the URL (or local path in demo mode) is **automatically copied to your clipboard**. No need to click anything - just drop and paste!
+</Card>
+
+### What Gets Copied
+
+- **Production mode**: Public R2 URL (e.g., `https://zipdrop.co/u/a1b2c3d4_photo.webp`)
+- **Demo mode**: Local file path (e.g., `/Users/you/Downloads/photo_a1b2c3d4.webp`)
+
+### Timing
+
+The URL is copied after:
+1. File processing completes
+2. Upload to R2 succeeds (production mode)
+3. Success state is displayed
+
+You can paste immediately when you see the checkmark.
+
+## Window Auto-Hide
+
+After a successful upload, ZipDrop:
+
+1. **Shows success message** for 2 seconds
+2. **Resets to idle state**
+3. **Auto-hides after 10 seconds** to keep your workspace clean
+
+<Tip>
+Don't want to wait? Press `ESC` to hide the window instantly, or click the menu bar icon.
+</Tip>
+
+## Demo vs Production Mode
+
+ZipDrop has two modes:
+
+### Demo Mode (Default)
+
+- Files are **saved to Downloads folder** (`~/Downloads` by default)
+- **No upload** to Cloudflare R2
+- **Local file path** copied to clipboard
+- Perfect for **testing** or **offline use**
+- Shows **"Demo" badge** in the UI
+
+### Production Mode
+
+- Files are **uploaded to Cloudflare R2**
+- **Public URL** copied to clipboard
+- **Requires R2 configuration** (see [Configuration](/configuration))
+- Toggle off demo mode in Settings
+
+<Note>
+The status text changes based on mode:
+- Demo: "Saved to Downloads!"
+- Production: "Copied to clipboard!"
+</Note>
+
+## Supported File Types
+
+ZipDrop supports a wide range of file types:
+
+- **Images**: JPG, PNG, GIF, BMP, TIFF, WebP, HEIC, SVG, ICO, RAW formats
+- **Documents**: PDF, Word, Excel, PowerPoint, TXT, RTF, CSV, Markdown
+- **Archives**: ZIP, TAR, GZ, 7Z, RAR, BZ2, XZ
+- **Video**: MOV, MP4, AVI, MKV, WebM, M4V, WMV
+- **Audio**: MP3, WAV, AAC, FLAC, M4A, OGG, AIFF
+- **Code**: JSON, HTML, CSS, JS, TS, Python, Rust, Go, Swift, Java, etc.
+- **macOS**: DMG, PKG, APP, IPA
+- **Fonts**: TTF, OTF, WOFF, WOFF2
+
+See the full list in `App.tsx:14-33`.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Managing Uploads" icon="list" href="/guides/managing-uploads">
+    View history, copy URLs, and delete files
+  </Card>
+  <Card title="Keyboard Shortcuts" icon="keyboard" href="/guides/keyboard-shortcuts">
+    Master ZipDrop's keyboard controls
+  </Card>
+</CardGroup>

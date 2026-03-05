@@ -1,0 +1,210 @@
+---
+title: 'Cloudflare R2 Setup'
+description: 'Create an R2 bucket, generate API tokens, and configure permissions for ZipDrop'
+---
+
+ZipDrop uses Cloudflare R2 for secure, fast file storage. This guide walks you through setting up your R2 bucket and obtaining the required credentials.
+
+## Prerequisites
+
+- A Cloudflare account ([sign up here](https://dash.cloudflare.com/sign-up))
+- Access to R2 storage (available on free and paid plans)
+
+## Step 1: Create an R2 Bucket
+
+<Steps>
+  <Step title="Navigate to R2">
+    1. Log in to your [Cloudflare Dashboard](https://dash.cloudflare.com)
+    2. Click **R2** in the left sidebar
+    3. If this is your first time, you may need to enable R2 for your account
+  </Step>
+
+  <Step title="Create a new bucket">
+    1. Click **Create bucket**
+    2. Enter a unique bucket name (e.g., `zipdrop-uploads`)
+    3. Select a location hint (choose the region closest to you)
+    4. Click **Create bucket**
+  </Step>
+
+  <Step title="Configure bucket for public access (optional)">
+    If you want uploaded files to be publicly accessible:
+    
+    1. Navigate to your bucket's **Settings** tab
+    2. Scroll to **Public access**
+    3. Click **Connect domain** to set up a custom domain (see [Custom Domain Configuration](/configuration/custom-domain))
+    
+    <Note>
+      Without a custom domain, files will only be accessible via signed URLs or private access.
+    </Note>
+  </Step>
+</Steps>
+
+## Step 2: Find Your Account ID
+
+<Steps>
+  <Step title="Locate Account ID">
+    Your Account ID is required for ZipDrop to connect to R2.
+    
+    1. In the Cloudflare Dashboard, click on **R2** in the sidebar
+    2. On the right side of the page, you'll see your **Account ID** displayed
+    3. Click the copy icon to copy it to your clipboard
+    
+    <Note>
+      The Account ID is also visible in the URL: `https://dash.cloudflare.com/<ACCOUNT_ID>/r2`
+    </Note>
+  </Step>
+</Steps>
+
+## Step 3: Generate API Tokens
+
+ZipDrop requires an API token with read and write permissions to your R2 bucket.
+
+<Steps>
+  <Step title="Create an API token">
+    1. In the Cloudflare Dashboard, navigate to **R2**
+    2. Click **Manage R2 API Tokens** in the right sidebar
+    3. Click **Create API token**
+  </Step>
+
+  <Step title="Configure token permissions">
+    1. **Token name**: Enter a descriptive name like `ZipDrop Upload Token`
+    2. **Permissions**: Select **Object Read & Write**
+    3. **Bucket scope**: 
+       - Choose **Apply to specific buckets only**
+       - Select the bucket you created earlier
+    4. **TTL**: Leave as default or set a custom expiration
+    5. Click **Create API Token**
+  </Step>
+
+  <Step title="Save your credentials">
+    After creating the token, Cloudflare will display:
+    
+    - **Access Key ID** (similar to `abc123def456...`)
+    - **Secret Access Key** (similar to `xyz789uvw012...`)
+    
+    <Warning>
+      The **Secret Access Key** is only shown once. Copy both values immediately and store them securely.
+    </Warning>
+    
+    You'll enter these credentials in ZipDrop's settings.
+  </Step>
+</Steps>
+
+## Step 4: Configure ZipDrop
+
+Once you have your credentials, you need to configure ZipDrop:
+
+1. **Open ZipDrop** from the menu bar
+2. **Click the settings icon** (gear icon)
+3. **Enter your R2 credentials**:
+   - **Access Key ID**: Paste the Access Key from Step 3
+   - **Secret Access Key**: Paste the Secret Access Key from Step 3
+   - **Bucket Name**: Enter your bucket name (e.g., `zipdrop-uploads`)
+   - **Account ID**: Paste your Account ID from Step 2
+   - **Public URL Base**: Your custom domain URL or R2 public URL (see below)
+
+### Public URL Configuration
+
+The **Public URL Base** determines how ZipDrop generates shareable links:
+
+<CodeGroup>
+```text Custom Domain
+https://files.yourdomain.com
+```
+
+```text R2 Public URL
+https://pub-<hash>.r2.dev
+```
+
+```text Default (no public access)
+https://<account-id>.r2.cloudflarestorage.com/<bucket-name>
+```
+</CodeGroup>
+
+<Note>
+  For custom domains, see the [Custom Domain Setup Guide](/configuration/custom-domain).
+</Note>
+
+## Credential Validation
+
+When you save your configuration, ZipDrop automatically validates your credentials by:
+
+1. Creating a test connection to your R2 bucket
+2. Uploading a tiny test file (`.zipdrop-connection-test`)
+3. Verifying the upload succeeded
+4. Deleting the test file
+
+This validation ensures:
+- Your Account ID is correct (endpoint resolves)
+- Your API credentials are valid (request is properly signed)
+- Your bucket exists and has write permissions
+
+See `uploader.rs:55-99` for the validation implementation:
+
+```rust
+pub async fn validate_r2_credentials(config: &R2Config) -> Result<(), String> {
+    // Create R2 credentials
+    let credentials = Credentials::new(
+        Some(&config.access_key),
+        Some(&config.secret_key),
+        None, None, None,
+    ).map_err(|e| friendly_error(&e.to_string()))?;
+
+    // R2 endpoint
+    let endpoint = format!("https://{}.r2.cloudflarestorage.com", config.account_id);
+    let region = Region::Custom {
+        region: "auto".to_string(),
+        endpoint,
+    };
+
+    // Create bucket handle
+    let bucket = Bucket::new(&config.bucket_name, region, credentials)
+        .map_err(|e| friendly_error(&e.to_string()))?
+        .with_path_style();
+
+    // Upload a tiny test object - validates everything
+    let test_key = ".zipdrop-connection-test";
+    let test_data = b"test";
+    
+    match bucket.put_object(test_key, test_data).await {
+        Ok(response) => {
+            if response.status_code() == 200 {
+                // Success! Clean up the test object
+                let _ = bucket.delete_object(test_key).await;
+                Ok(())
+            } else {
+                Err("Invalid R2 credentials".to_string())
+            }
+        }
+        Err(e) => Err(friendly_error(&e.to_string()))
+    }
+}
+```
+
+## Next Steps
+
+After configuring R2:
+
+- [Learn how credentials are securely stored](/configuration/credentials)
+- [Set up a custom domain](/configuration/custom-domain) for branded upload URLs
+- Start uploading files by dragging them to the ZipDrop window
+
+## Troubleshooting
+
+### "Invalid R2 credentials" error
+
+- Verify your Access Key ID and Secret Access Key are correct
+- Ensure the API token has **Object Read & Write** permissions
+- Check that the token is scoped to the correct bucket
+
+### "Connection failed" error
+
+- Check your internet connection
+- Verify your firewall isn't blocking Cloudflare R2 (*.r2.cloudflarestorage.com)
+- Ensure your Account ID is correct
+
+### "Bucket not found" error
+
+- Verify the bucket name matches exactly (case-sensitive)
+- Ensure the bucket exists in your Cloudflare account
+- Check that the API token has access to this specific bucket

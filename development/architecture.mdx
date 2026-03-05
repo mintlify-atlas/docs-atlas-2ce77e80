@@ -1,0 +1,294 @@
+---
+title: Architecture
+description: Understanding ZipDrop's tech stack, project structure, and core modules
+---
+
+ZipDrop is built using modern web technologies wrapped in a native macOS shell, providing a lightweight and performant user experience.
+
+## Tech Stack
+
+### Frontend
+
+<CardGroup cols={2}>
+  <Card title="React 19" icon="react">
+    Modern UI library with hooks and concurrent features
+  </Card>
+  <Card title="TypeScript 5.8" icon="code">
+    Type-safe JavaScript for better DX
+  </Card>
+  <Card title="Vite 7" icon="bolt">
+    Lightning-fast build tool and dev server
+  </Card>
+  <Card title="CSS3" icon="palette">
+    Custom styles with macOS vibrancy effects
+  </Card>
+</CardGroup>
+
+### Backend
+
+<CardGroup cols={2}>
+  <Card title="Tauri 2" icon="window">
+    Lightweight alternative to Electron using native webviews
+  </Card>
+  <Card title="Rust" icon="rust">
+    Systems programming language for performance and safety
+  </Card>
+  <Card title="Tokio" icon="server">
+    Async runtime for concurrent operations
+  </Card>
+  <Card title="macOS Keychain" icon="key">
+    Secure credential storage using native APIs
+  </Card>
+</CardGroup>
+
+### Storage & Services
+
+- **Cloudflare R2**: S3-compatible object storage
+- **rust-s3**: S3 client library for R2 uploads
+- **arboard**: Cross-platform clipboard access
+
+## Project Structure
+
+```
+zipdrop/
+├── src/                          # Frontend (React + TypeScript)
+│   ├── App.tsx                   # Main UI component (drop zone, settings)
+│   ├── App.css                   # Styles with vibrancy effects
+│   ├── main.tsx                  # React entry point
+│   └── assets/                   # Images and static assets
+│
+├── src-tauri/                    # Backend (Rust + Tauri)
+│   ├── src/
+│   │   ├── main.rs              # App lifecycle & Tauri commands
+│   │   ├── lib.rs               # Module exports for mobile builds
+│   │   ├── config.rs            # Configuration & Keychain storage
+│   │   ├── processor.rs         # File processing & WebP conversion
+│   │   └── uploader.rs          # R2 upload with retry logic
+│   │
+│   ├── Cargo.toml               # Rust dependencies
+│   ├── build.rs                 # Tauri build script
+│   ├── tauri.conf.json          # App configuration
+│   └── icons/                   # App icons (tray, bundle)
+│
+├── package.json                  # Node.js dependencies & scripts
+├── pnpm-lock.yaml               # Locked dependency versions
+├── vite.config.ts               # Vite bundler config
+├── tsconfig.json                # TypeScript compiler config
+└── index.html                   # HTML entry point
+```
+
+## Core Rust Modules
+
+### `main.rs` - Application Entry Point
+
+**Location**: `src-tauri/src/main.rs:248-350`
+
+The main module handles:
+- **App initialization** - Loads R2 config and settings from disk
+- **Tray icon** - Creates menu bar icon with positioning logic
+- **Window management** - Shows/hides window on tray icon click
+- **Tauri commands** - Exposes Rust functions to frontend via `invoke_handler`
+
+**Key Tauri Commands**:
+```rust
+process_and_upload()      // Main upload workflow
+set_r2_config()           // Save R2 credentials
+get_config_status()       // Check if R2 is configured
+validate_r2_config()      // Test credentials before saving
+delete_from_r2()          // Remove file from R2
+copy_to_clipboard()       // Copy URL to clipboard
+reveal_in_finder()        // Open file location
+```
+
+**App State**:
+```rust
+pub struct AppState {
+    pub r2_config: Mutex<Option<R2Config>>,
+    pub settings: Mutex<AppSettings>,
+}
+```
+
+### `config.rs` - Configuration Management
+
+**Location**: `src-tauri/src/config.rs`
+
+Handles secure storage of R2 credentials and app settings:
+
+**R2Config Structure**:
+```rust
+pub struct R2Config {
+    pub access_key: String,       // Stored in Keychain
+    pub secret_key: String,       // Stored in Keychain
+    pub bucket_name: String,      // Stored in config.json
+    pub account_id: String,       // Stored in config.json
+    pub public_url_base: String,  // Stored in config.json
+}
+```
+
+**Key Functions**:
+- `save_r2_config()` - Saves secrets to macOS Keychain as JSON blob
+- `load_r2_config()` - Loads config from file + Keychain
+- `delete_r2_config()` - Removes credentials from Keychain
+- `migrate_keychain_entries()` - One-time cleanup of old format
+
+**Storage Locations**:
+- Credentials: macOS Keychain (`com.metalayer.zipdrop`)
+- Config: `~/.config/zipdrop/config.json`
+- Settings: `~/.config/zipdrop/settings.json`
+
+### `processor.rs` - File Processing
+
+**Location**: `src-tauri/src/processor.rs`
+
+Handles file validation, image conversion, and ZIP creation:
+
+**Processing Logic** (see `src-tauri/src/processor.rs:287-313`):
+1. **Single convertible image** → WebP conversion at 80% quality
+2. **Multiple files** → ZIP archive with deflate compression
+3. **Single non-image or WebP** → Passthrough copy
+
+**Validation Limits**:
+```rust
+MAX_FILES: 50                    // Maximum number of files
+MAX_SINGLE_FILE_SIZE: 500 MB    // Per-file size limit
+MAX_TOTAL_SIZE: 1 GB            // Total upload size limit
+```
+
+**Supported File Types**: Images (JPG, PNG, GIF, etc.), documents (PDF, DOCX), archives (ZIP, TAR), video (MP4, MOV), audio (MP3, WAV), code files, and more (see `ALLOWED_EXTENSIONS`).
+
+**Key Functions**:
+- `validate_files()` - Checks file count, size, and extensions
+- `convert_to_webp()` - Converts images using `image` crate
+- `create_zip()` - Creates compressed archives using `zip` crate
+- `process_files()` - Main entry point orchestrating the workflow
+
+### `uploader.rs` - R2 Upload
+
+**Location**: `src-tauri/src/uploader.rs`
+
+Handles Cloudflare R2 uploads with retry logic:
+
+**Upload Flow**:
+1. Read file data from disk
+2. Generate unique key: `u/{uuid}_{filename}.{ext}`
+3. Create S3-compatible bucket handle
+4. Upload with exponential backoff retry (up to 3 attempts)
+5. Return public URL
+
+**Retry Configuration**:
+```rust
+MAX_RETRIES: 3
+INITIAL_RETRY_DELAY: 1000ms  // Doubles each retry
+```
+
+**Key Functions**:
+- `upload_to_r2()` - Main upload with retry logic
+- `validate_r2_credentials()` - Tests credentials by uploading test object
+- `delete_from_r2()` - Removes objects from bucket
+- `is_transient_error()` - Determines if error is worth retrying
+
+**R2 Endpoint Format**:
+```
+https://{account_id}.r2.cloudflarestorage.com/{bucket_name}
+```
+
+## Frontend Components
+
+### `App.tsx` - Main Component
+
+**Location**: `src/App.tsx`
+
+The single-page React app includes:
+- **Drop zone** - File drag-and-drop interface
+- **Upload history** - List of recent uploads with actions
+- **Settings panel** - R2 configuration form
+- **Demo mode toggle** - Switch between local and cloud storage
+
+**Tauri API Integration**:
+```typescript
+import { invoke } from '@tauri-apps/api/core';
+
+// Call Rust functions from frontend
+await invoke('process_and_upload', { paths: ['/path/to/file'] });
+await invoke('set_r2_config', { config: {...} });
+```
+
+## Key Dependencies
+
+### Rust Dependencies (Cargo.toml)
+
+```toml
+[dependencies]
+tauri = { version = "2", features = ["tray-icon", "macos-private-api"] }
+image = { version = "0.25", features = ["webp"] }
+zip = { version = "2", features = ["deflate"] }
+rust-s3 = { version = "0.35", features = ["tokio-rustls-tls"] }
+keyring = { version = "3", features = ["apple-native"] }
+tokio = { version = "1", features = ["full"] }
+uuid = { version = "1", features = ["v4"] }
+arboard = "3"
+dirs = "5"
+serde = { version = "1", features = ["derive"] }
+```
+
+### Frontend Dependencies (package.json)
+
+```json
+{
+  "dependencies": {
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "@tauri-apps/api": "^2",
+    "@tauri-apps/plugin-opener": "^2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2",
+    "@vitejs/plugin-react": "^4.6.0",
+    "typescript": "~5.8.3",
+    "vite": "^7.0.4"
+  }
+}
+```
+
+## macOS Integration
+
+### Vibrancy Effect
+
+ZipDrop uses native macOS vibrancy for a translucent, frosted-glass effect:
+
+```rust
+use window_vibrancy::{apply_vibrancy, NSVisualEffectMaterial};
+
+apply_vibrancy(&window, NSVisualEffectMaterial::Menu, None, Some(12.0))
+```
+
+### Tray Icon
+
+The menu bar icon uses a template image for automatic dark/light mode support:
+
+```rust
+let tray_icon = include_image!("icons/tray-icon.png");
+TrayIconBuilder::new()
+    .icon(tray_icon)
+    .icon_as_template(true)  // Auto dark mode support
+```
+
+### Keychain Access
+
+Credentials are stored using the `keyring` crate with native macOS Keychain integration:
+
+```rust
+let entry = Entry::new("com.metalayer.zipdrop", "r2_credentials")?;
+entry.set_password(&secrets_json)?;
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Getting Started" icon="play" href="/development/getting-started">
+    Set up your development environment
+  </Card>
+  <Card title="Building" icon="hammer" href="/development/building">
+    Create production builds and distribution packages
+  </Card>
+</CardGroup>

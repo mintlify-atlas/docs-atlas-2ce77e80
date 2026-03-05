@@ -1,0 +1,222 @@
+---
+title: Installation
+description: Install ZipDrop on your Mac using Homebrew or manual download
+---
+
+# Installation
+
+ZipDrop is available for macOS 12.0 (Monterey) or later. You can install it using Homebrew or download it manually from GitHub releases.
+
+## Requirements
+
+Before installing ZipDrop, ensure your system meets these requirements:
+
+<Check>
+  **macOS 12.0 or later** - ZipDrop requires macOS Monterey or newer
+</Check>
+
+<Info>
+  You do NOT need Cloudflare R2 credentials to install ZipDrop. Demo mode works out of the box!
+</Info>
+
+## Installation Methods
+
+### Option 1: Homebrew (Recommended)
+
+The easiest way to install ZipDrop is using Homebrew:
+
+<Steps>
+  <Step title="Install Homebrew (if needed)">
+    If you don't have Homebrew installed, install it first:
+    
+    ```bash
+    /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+    ```
+  </Step>
+  
+  <Step title="Install ZipDrop">
+    Install ZipDrop with a single command:
+    
+    ```bash
+    brew install zipdrop
+    ```
+    
+    <Note>
+      This command is a placeholder. Once ZipDrop is published to Homebrew, this will be the installation command.
+    </Note>
+  </Step>
+  
+  <Step title="Launch ZipDrop">
+    After installation, launch ZipDrop:
+    
+    ```bash
+    open /Applications/ZipDrop.app
+    ```
+    
+    Or find it in your Applications folder and double-click to launch.
+  </Step>
+</Steps>
+
+### Option 2: Manual Download
+
+Download the latest release directly from GitHub:
+
+<Steps>
+  <Step title="Download the DMG">
+    Visit the [ZipDrop releases page](https://github.com/theforkproject-dev/zipdrop/releases) and download the latest `.dmg` file.
+    
+    <Tip>
+      Look for files named like `ZipDrop_1.0.0_aarch64.dmg` (Apple Silicon) or `ZipDrop_1.0.0_x64.dmg` (Intel)
+    </Tip>
+  </Step>
+  
+  <Step title="Open the DMG">
+    Double-click the downloaded `.dmg` file to mount it.
+  </Step>
+  
+  <Step title="Move to Applications">
+    Drag the **ZipDrop.app** icon to your **Applications** folder.
+    
+    <Warning>
+      Make sure to move the app to `/Applications` and not run it from the DMG. Running from the DMG may cause issues.
+    </Warning>
+  </Step>
+  
+  <Step title="Eject the DMG">
+    After copying, eject the DMG by right-clicking it in Finder and selecting "Eject".
+  </Step>
+  
+  <Step title="Launch ZipDrop">
+    Open your Applications folder and double-click **ZipDrop** to launch it.
+  </Step>
+</Steps>
+
+## First Launch
+
+When you first launch ZipDrop, you may see a security prompt:
+
+<Warning>
+  **"ZipDrop cannot be opened because it is from an unidentified developer"**
+</Warning>
+
+This is normal for apps downloaded outside the Mac App Store. To open ZipDrop:
+
+<Steps>
+  <Step title="Open System Settings">
+    Go to **System Settings** → **Privacy & Security**
+  </Step>
+  
+  <Step title="Allow ZipDrop">
+    Scroll down to find the message about ZipDrop being blocked. Click **Open Anyway**.
+  </Step>
+  
+  <Step title="Confirm">
+    In the dialog that appears, click **Open** to confirm.
+  </Step>
+</Steps>
+
+<Tip>
+  This security prompt only appears once. After the first launch, ZipDrop will open normally.
+</Tip>
+
+## Verify Installation
+
+After launching ZipDrop, you should see:
+
+1. **Menu bar icon** - Look for the ZipDrop icon in your macOS menu bar (top-right of your screen)
+2. **Click the icon** - Clicking it should open the ZipDrop drop zone window
+3. **Demo mode badge** - You should see a "Demo" badge in the top-right, indicating demo mode is active
+
+<Check>
+  If you see the menu bar icon and can open the drop zone, ZipDrop is successfully installed!
+</Check>
+
+## Updating ZipDrop
+
+### Homebrew Updates
+
+If you installed via Homebrew, update to the latest version:
+
+```bash
+brew upgrade zipdrop
+```
+
+### Manual Updates
+
+1. Download the latest release from GitHub
+2. Quit ZipDrop (right-click menu bar icon → Quit)
+3. Replace the old app in `/Applications` with the new one
+4. Launch the new version
+
+<Note>
+  Your settings and R2 credentials are stored separately and will be preserved during updates.
+</Note>
+
+## Uninstalling ZipDrop
+
+### Homebrew Uninstall
+
+```bash
+brew uninstall zipdrop
+```
+
+### Manual Uninstall
+
+<Steps>
+  <Step title="Quit ZipDrop">
+    Right-click the menu bar icon and select **Quit**
+  </Step>
+  
+  <Step title="Remove the app">
+    Move `/Applications/ZipDrop.app` to the Trash
+  </Step>
+  
+  <Step title="Remove configuration (optional)">
+    If you want to remove all settings and credentials:
+    
+    ```bash
+    rm -rf ~/Library/Application\ Support/com.metalayer.zipdrop
+    rm -rf ~/.config/zipdrop
+    ```
+    
+    Your R2 credentials in Keychain will remain. To remove them:
+    
+    1. Open **Keychain Access** app
+    2. Search for "zipdrop"
+    3. Delete the "com.metalayer.zipdrop" entries
+  </Step>
+</Steps>
+
+## Troubleshooting
+
+### App won't open
+
+- Ensure you're running macOS 12.0 or later
+- Try the "Open Anyway" method in System Settings → Privacy & Security
+- Check Console.app for error messages
+
+### Menu bar icon doesn't appear
+
+- Quit and relaunch ZipDrop
+- Check if ZipDrop is running in Activity Monitor
+- Try restarting your Mac
+
+### "App is damaged" error
+
+- This can happen if the download was corrupted
+- Re-download the DMG and try again
+- Remove the quarantine attribute:
+  ```bash
+  xattr -cr /Applications/ZipDrop.app
+  ```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Start uploading files in 5 minutes
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/cloudflare-r2-setup">
+    Set up Cloudflare R2 for cloud uploads
+  </Card>
+</CardGroup>

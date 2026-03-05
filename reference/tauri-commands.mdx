@@ -1,0 +1,426 @@
+---
+title: Tauri Commands
+description: Complete reference for all Tauri commands exposed to the frontend
+---
+
+ZipDrop exposes several Tauri commands that the frontend can invoke to interact with the Rust backend.
+
+## Core Workflow
+
+### process_and_upload
+
+Main command that processes files and uploads them to R2 or saves locally in demo mode.
+
+```rust
+#[tauri::command]
+async fn process_and_upload(
+    state: tauri::State<'_, AppState>,
+    paths: Vec<String>,
+) -> Result<DropResult, String>
+```
+
+<ParamField path="state" type="AppState" required>
+  Application state containing R2 config and settings
+</ParamField>
+
+<ParamField path="paths" type="Vec<String>" required>
+  Array of file paths (as strings) to process and upload
+</ParamField>
+
+**Returns**: `Result<DropResult, String>`
+
+#### DropResult Structure
+
+<ResponseField name="url" type="String" required>
+  Public URL to access the uploaded file. Format: `https://your-domain.com/u/{key}` for R2 uploads, or `file:///path/to/file` for demo mode
+</ResponseField>
+
+<ResponseField name="local_path" type="Option<String>">
+  Path to the local file (only set in demo mode)
+</ResponseField>
+
+<ResponseField name="r2_key" type="Option<String>">
+  R2 object key (only set when uploaded to R2)
+</ResponseField>
+
+<ResponseField name="original_size" type="u64" required>
+  Total size of original file(s) in bytes
+</ResponseField>
+
+<ResponseField name="processed_size" type="u64" required>
+  Size of processed file in bytes
+</ResponseField>
+
+<ResponseField name="file_type" type="String" required>
+  File extension of the output ("webp", "zip", etc.)
+</ResponseField>
+
+<ResponseField name="is_demo" type="bool" required>
+  Whether the file was processed in demo mode
+</ResponseField>
+
+**Workflow**:
+
+1. Checks if demo mode is enabled
+2. Determines output directory (Downloads/ZipDrop for demo, /tmp/zipdrop for production)
+3. Processes files (convert to WebP or ZIP)
+4. Either:
+   - **Demo mode**: Saves to Downloads/ZipDrop, copies local path to clipboard
+   - **Production mode**: Uploads to R2, copies public URL to clipboard
+5. Returns `DropResult` with all metadata
+
+**Example Invocation** (JavaScript):
+
+<CodeGroup>
+```typescript Demo Mode
+const result = await invoke('process_and_upload', {
+  paths: ['/Users/john/Desktop/photo.jpg']
+});
+
+// Result:
+// {
+//   url: "file:///Users/john/Downloads/ZipDrop/photo_a1b2c3d4.webp",
+//   local_path: "/Users/john/Downloads/ZipDrop/photo_a1b2c3d4.webp",
+//   r2_key: null,
+//   original_size: 2500000,
+//   processed_size: 850000,
+//   file_type: "webp",
+//   is_demo: true
+// }
+```
+
+```typescript Production Mode
+const result = await invoke('process_and_upload', {
+  paths: [
+    '/Users/john/Desktop/doc.pdf',
+    '/Users/john/Desktop/photo.jpg'
+  ]
+});
+
+// Result:
+// {
+//   url: "https://files.example.com/u/x7y8z9w0_archive.zip",
+//   local_path: null,
+//   r2_key: "u/x7y8z9w0_archive.zip",
+//   original_size: 5000000,
+//   processed_size: 4200000,
+//   file_type: "zip",
+//   is_demo: false
+// }
+```
+</CodeGroup>
+
+**Error Cases**:
+
+- Empty paths array: `"No files provided"`
+- Validation failures: See [File Processing](/reference/file-processing#validate_files) errors
+- R2 not configured (production mode): `"R2 not configured. Please set up your R2 credentials or enable demo mode."`
+- Upload failures: Network or credential errors from R2
+
+## Configuration Management
+
+### set_r2_config
+
+Saves R2 configuration to macOS Keychain and updates app state.
+
+```rust
+#[tauri::command]
+fn set_r2_config(state: tauri::State<'_, AppState>, config: R2Config) -> Result<(), String>
+```
+
+<ParamField path="state" type="AppState" required>
+  Application state
+</ParamField>
+
+<ParamField path="config" type="R2Config" required>
+  R2 configuration object with all credentials
+</ParamField>
+
+**R2Config Structure**:
+
+<ParamField path="access_key" type="String" required>
+  R2 access key ID
+</ParamField>
+
+<ParamField path="secret_key" type="String" required>
+  R2 secret access key
+</ParamField>
+
+<ParamField path="bucket_name" type="String" required>
+  R2 bucket name
+</ParamField>
+
+<ParamField path="account_id" type="String" required>
+  Cloudflare account ID
+</ParamField>
+
+<ParamField path="public_url_base" type="String" required>
+  Base URL for public access (e.g., `https://files.example.com`)
+</ParamField>
+
+**Side Effects**:
+- Saves credentials to macOS Keychain (secure storage)
+- Saves non-secret config to `~/Library/Application Support/zipdrop/config.json`
+- Automatically disables demo mode
+- Updates in-memory app state
+
+**Example Invocation**:
+
+```typescript
+await invoke('set_r2_config', {
+  config: {
+    access_key: 'your-access-key',
+    secret_key: 'your-secret-key',
+    bucket_name: 'my-bucket',
+    account_id: 'abc123def456',
+    public_url_base: 'https://files.example.com'
+  }
+});
+```
+
+### get_r2_config
+
+Retrieves the current R2 configuration (for populating settings forms).
+
+```rust
+#[tauri::command]
+fn get_r2_config(state: tauri::State<'_, AppState>) -> Option<R2Config>
+```
+
+**Returns**: `Option<R2Config>` - Configuration if set, `null` if not configured
+
+**Example**:
+
+```typescript
+const config = await invoke('get_r2_config');
+if (config) {
+  // Populate form with config.bucket_name, etc.
+}
+```
+
+### get_config_status
+
+Returns the current configuration status (lighter weight than `get_r2_config`).
+
+```rust
+#[tauri::command]
+fn get_config_status(state: tauri::State<'_, AppState>) -> ConfigStatus
+```
+
+**ConfigStatus Structure**:
+
+<ResponseField name="is_configured" type="bool" required>
+  Whether R2 credentials are configured
+</ResponseField>
+
+<ResponseField name="demo_mode" type="bool" required>
+  Whether demo mode is enabled
+</ResponseField>
+
+<ResponseField name="bucket_name" type="Option<String>">
+  Current bucket name if configured
+</ResponseField>
+
+**Example**:
+
+```typescript
+const status = await invoke('get_config_status');
+// { is_configured: true, demo_mode: false, bucket_name: "my-bucket" }
+```
+
+### clear_r2_config
+
+Deletes R2 configuration from Keychain and file system.
+
+```rust
+#[tauri::command]
+fn clear_r2_config(state: tauri::State<'_, AppState>) -> Result<(), String>
+```
+
+**Side Effects**:
+- Removes credentials from macOS Keychain
+- Deletes `~/Library/Application Support/zipdrop/config.json`
+- Clears in-memory app state
+
+**Example**:
+
+```typescript
+await invoke('clear_r2_config');
+```
+
+### validate_r2_config
+
+Validates R2 credentials before saving by uploading a test object.
+
+```rust
+#[tauri::command]
+async fn validate_r2_config(config: R2Config) -> Result<(), String>
+```
+
+<ParamField path="config" type="R2Config" required>
+  R2 configuration to validate
+</ParamField>
+
+**Validation Process**:
+1. Creates S3/R2 client with provided credentials
+2. Uploads tiny test object (`.zipdrop-connection-test`)
+3. Deletes test object if upload succeeds
+4. Returns error if any step fails
+
+**Error Messages**:
+- `"Connection timed out - please try again"` - Network timeout
+- `"Connection failed - check your network"` - Network unreachable
+- `"Invalid R2 credentials"` - Auth failure or other error
+
+**Example**:
+
+```typescript
+try {
+  await invoke('validate_r2_config', { config });
+  // Credentials are valid, proceed with set_r2_config
+} catch (error) {
+  // Show error to user
+}
+```
+
+## Settings
+
+### set_demo_mode
+
+Enables or disables demo mode.
+
+```rust
+#[tauri::command]
+fn set_demo_mode(state: tauri::State<'_, AppState>, enabled: bool) -> Result<(), String>
+```
+
+<ParamField path="enabled" type="bool" required>
+  Whether to enable demo mode
+</ParamField>
+
+**Side Effects**:
+- Updates `~/Library/Application Support/zipdrop/settings.json`
+- Updates in-memory app state
+
+**Example**:
+
+```typescript
+await invoke('set_demo_mode', { enabled: true });
+```
+
+## Utility Commands
+
+### copy_to_clipboard
+
+Copies text to the system clipboard.
+
+```rust
+#[tauri::command]
+fn copy_to_clipboard(text: String) -> Result<(), String>
+```
+
+<ParamField path="text" type="String" required>
+  Text to copy to clipboard
+</ParamField>
+
+**Example**:
+
+```typescript
+await invoke('copy_to_clipboard', { 
+  text: 'https://files.example.com/u/file.zip' 
+});
+```
+
+### reveal_in_finder
+
+Opens Finder and selects the specified file.
+
+```rust
+#[tauri::command]
+fn reveal_in_finder(path: String) -> Result<(), String>
+```
+
+<ParamField path="path" type="String" required>
+  Absolute path to the file to reveal
+</ParamField>
+
+**Example**:
+
+```typescript
+await invoke('reveal_in_finder', { 
+  path: '/Users/john/Downloads/ZipDrop/file.webp' 
+});
+```
+
+### open_in_browser
+
+Opens a URL in the default browser.
+
+```rust
+#[tauri::command]
+fn open_in_browser(url: String) -> Result<(), String>
+```
+
+<ParamField path="url" type="String" required>
+  URL to open
+</ParamField>
+
+**Example**:
+
+```typescript
+await invoke('open_in_browser', { 
+  url: 'https://files.example.com/u/file.zip' 
+});
+```
+
+### delete_from_r2
+
+Deletes an object from R2 storage.
+
+```rust
+#[tauri::command]
+async fn delete_from_r2(state: tauri::State<'_, AppState>, key: String) -> Result<(), String>
+```
+
+<ParamField path="state" type="AppState" required>
+  Application state containing R2 config
+</ParamField>
+
+<ParamField path="key" type="String" required>
+  R2 object key to delete (e.g., `"u/x7y8z9w0_file.zip"`)
+</ParamField>
+
+**Example**:
+
+```typescript
+await invoke('delete_from_r2', { 
+  key: 'u/x7y8z9w0_file.zip' 
+});
+```
+
+<Warning>
+  This command is fire-and-forget. Errors are logged but the operation continues. Use for cleanup when you don't need to guarantee deletion.
+</Warning>
+
+## App State
+
+All commands that require state access the global `AppState` structure:
+
+```rust
+pub struct AppState {
+    pub r2_config: Mutex<Option<R2Config>>,
+    pub settings: Mutex<AppSettings>,
+}
+```
+
+<ParamField path="r2_config" type="Mutex<Option<R2Config>>" required>
+  Thread-safe R2 configuration (None if not configured)
+</ParamField>
+
+<ParamField path="settings" type="Mutex<AppSettings>" required>
+  Thread-safe app settings (demo mode, output directory)
+</ParamField>
+
+<Note>
+  State is managed by Tauri and automatically injected into command handlers. Frontend code doesn't need to pass state explicitly.
+</Note>

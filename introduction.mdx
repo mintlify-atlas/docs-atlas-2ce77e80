@@ -1,0 +1,130 @@
+---
+title: Introduction
+description: A lightweight macOS menu bar app for instant file uploads to Cloudflare R2
+---
+
+# Introduction to ZipDrop
+
+ZipDrop is a lightweight macOS menu bar app that makes file uploads instant and effortless. Drop files onto the menu bar icon, and get a shareable URL copied to your clipboard immediately.
+
+## What is ZipDrop?
+
+ZipDrop lives in your macOS menu bar, providing a simple drag-and-drop interface for uploading files to Cloudflare R2 storage. It automatically optimizes your uploads:
+
+- **Images** are converted to WebP format for smaller file sizes
+- **Multiple files** are automatically zipped together
+- **Single files** are uploaded as-is
+
+Once uploaded, the public URL is instantly copied to your clipboard, ready to share.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Drag & Drop" icon="hand-pointer">
+    Drop files onto the menu bar icon to upload instantly
+  </Card>
+  <Card title="Auto-Optimization" icon="wand-magic-sparkles">
+    Images are automatically converted to WebP for 30-80% smaller file sizes
+  </Card>
+  <Card title="Multi-File Support" icon="file-zipper">
+    Drop multiple files and they're zipped together automatically
+  </Card>
+  <Card title="Instant Clipboard" icon="clipboard">
+    URL is copied to your clipboard immediately after upload
+  </Card>
+  <Card title="Secure Storage" icon="lock">
+    R2 credentials are stored in macOS Keychain
+  </Card>
+  <Card title="Demo Mode" icon="flask">
+    Try it out locally before configuring cloud storage
+  </Card>
+</CardGroup>
+
+## How It Works
+
+<Steps>
+  <Step title="Click the menu bar icon">
+    Click the ZipDrop icon in your macOS menu bar to open the drop zone
+  </Step>
+  
+  <Step title="Drag files into the drop zone">
+    Drag one or more files into the window. ZipDrop accepts images, documents, videos, audio, code files, and more.
+  </Step>
+  
+  <Step title="Automatic processing">
+    Files are processed automatically:
+    - Single images → converted to WebP (unless already WebP)
+    - Multiple files → zipped together
+    - Other files → uploaded as-is
+  </Step>
+  
+  <Step title="Upload to R2">
+    Processed files are uploaded to your Cloudflare R2 bucket (or saved locally in demo mode)
+  </Step>
+  
+  <Step title="Get your URL">
+    The public URL is copied to your clipboard instantly. Just paste and share!
+  </Step>
+</Steps>
+
+## System Requirements
+
+<Note>
+  **Operating System**: macOS 12.0 (Monterey) or later
+</Note>
+
+ZipDrop is built specifically for macOS and integrates deeply with system features like:
+- Menu bar integration
+- macOS Keychain for secure credential storage
+- Native drag-and-drop events
+- Finder integration (reveal files)
+
+### Optional Requirements
+
+For cloud uploads (not required for demo mode):
+- Cloudflare account with R2 storage enabled
+- R2 API credentials (Access Key ID and Secret Access Key)
+
+## Supported File Types
+
+ZipDrop supports a wide range of file types:
+
+- **Images**: JPG, PNG, GIF, BMP, TIFF, WebP, HEIC, HEIF, SVG, ICO, RAW, CR2, NEF, ARW
+- **Documents**: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, TXT, RTF, CSV, MD, Pages, Numbers, Keynote
+- **Archives**: ZIP, TAR, GZ, 7Z, RAR, BZ2, XZ, TGZ
+- **Video**: MOV, MP4, AVI, MKV, WebM, M4V, WMV, FLV, 3GP
+- **Audio**: MP3, WAV, AAC, FLAC, M4A, OGG, WMA, AIFF
+- **Code & Data**: JSON, XML, HTML, CSS, JS, TS, JSX, TSX, Python, Rust, Go, Swift, Java, C, C++, Ruby, PHP, Shell scripts, YAML, TOML, INI, SQL, GraphQL
+- **macOS/Apps**: DMG, PKG, APP, IPA
+- **Fonts**: TTF, OTF, WOFF, WOFF2, EOT
+
+## File Size Limits
+
+<Warning>
+  - **Maximum single file**: 500 MB
+  - **Maximum total upload**: 1 GB
+  - **Maximum files per upload**: 50 files
+</Warning>
+
+These limits are enforced before processing to ensure reliable uploads.
+
+## Built With
+
+ZipDrop is built with modern, efficient technologies:
+
+- **[Tauri 2](https://tauri.app/)** - Lightweight native app framework
+- **React + TypeScript** - Modern frontend
+- **Rust** - Fast, secure backend
+- **Cloudflare R2** - S3-compatible object storage
+- **macOS Keychain** - Secure credential storage
+
+## What's Next?
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Get ZipDrop installed on your Mac
+  </Card>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Start uploading files in 5 minutes
+  </Card>
+</CardGroup>

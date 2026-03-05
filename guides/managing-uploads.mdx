@@ -1,0 +1,228 @@
+---
+title: Managing Uploads
+description: View recent uploads, copy URLs, open files in Finder, and delete from R2
+---
+
+## Recent Uploads List
+
+ZipDrop keeps track of your recent uploads in the **Recent** section at the bottom of the window.
+
+### Upload History Storage
+
+- **Maximum 10 recent uploads** are stored
+- **Persisted in localStorage** (`zipdrop_uploads` key)
+- **Survives app restarts** - your history is always available
+- **Newest first** - most recent upload appears at the top
+
+<Note>
+The upload list is stored locally in your browser's localStorage. It's never synced or sent anywhere.
+</Note>
+
+## Upload Item Details
+
+Each upload in the list shows:
+
+- **File name** - Processed filename (e.g., `photo.webp`, `archive.zip`)
+- **File size** - Human-readable size of the processed file
+- **Local badge** - Shows "Local" tag for demo mode uploads
+- **File icon** - Visual indicator for all files
+
+### How Filenames Are Generated
+
+ZipDrop uses smart naming logic (from `App.tsx:202-208`):
+
+- **Multiple files**: Always named `archive.zip`
+- **Single file**: Original name + processed extension
+  - Example: `vacation.jpg` → `vacation.webp`
+  - Example: `report.pdf` → `report.pdf`
+
+## Copying URLs
+
+There are two ways to copy a file's URL:
+
+<Steps>
+  <Step title="Click the entire upload item">
+    Clicking anywhere on the upload row copies the URL/path to clipboard.
+  </Step>
+  
+  <Step title="Click the copy button">
+    Click the link icon (📋) in the actions section for explicit copy action.
+  </Step>
+</Steps>
+
+### What Gets Copied
+
+- **Production uploads**: Public R2 URL (e.g., `https://zipdrop.co/u/a1b2c3d4_photo.webp`)
+- **Demo mode uploads**: Local file path (e.g., `/Users/you/Downloads/photo_a1b2c3d4.webp`)
+
+<Tip>
+The main click area copies the most relevant link for each mode - local path in demo mode, URL in production.
+</Tip>
+
+## Opening Files
+
+The open button (🔗/📁 icon) has different behavior based on upload type:
+
+### Demo Mode Uploads (Local Files)
+
+- **Icon**: Folder icon (📁)
+- **Action**: "Show in Finder"
+- **Command**: `reveal_in_finder(localPath)` from `main.rs:212-219`
+- **Result**: Opens Finder and highlights the file
+
+### Production Uploads (R2 Files)
+
+- **Icon**: External link icon (🔗)
+- **Action**: "Open"
+- **Command**: `open_in_browser(url)` from `main.rs:222-229`
+- **Result**: Opens the URL in your default browser
+
+<Note>
+The icon changes automatically based on whether the upload has a `localPath` property.
+</Note>
+
+## Deleting Uploads
+
+The trash icon (🗑️) removes uploads from your history. It has two modes:
+
+### Regular Click (Remove from History)
+
+- **Removes item** from the Recent list
+- **Deletes from localStorage** immediately
+- **Does NOT delete** from R2 or local disk
+- **Use case**: Clean up your upload history
+
+### Shift + Click (Delete from Cloud)
+
+<Card title="Shift+Click: Delete from R2" icon="trash" color="#ef4444">
+  Hold **Shift** while clicking the trash icon on a production upload to delete the file from Cloudflare R2.
+</Card>
+
+#### How Shift+Click Works
+
+From `App.tsx:321-329`:
+
+```tsx
+const deleteUpload = (e: React.MouseEvent, item: UploadItem) => {
+  // Remove from UI immediately
+  setUploads(prev => prev.filter(u => u.id !== item.id));
+  
+  // If shift+click on R2 upload, fire-and-forget delete from cloud
+  if (e.shiftKey && item.r2Key && !item.isDemo) {
+    invoke("delete_from_r2", { key: item.r2Key }); // no await - async delete
+  }
+};
+```
+
+#### Shift+Click Behavior
+
+1. **Checks for Shift key** press
+2. **Verifies it's an R2 upload** (not demo mode)
+3. **Verifies R2 key exists** in the upload metadata
+4. **Calls backend** `delete_from_r2` command
+5. **Fire-and-forget** - doesn't wait for confirmation
+6. **Removes from UI** immediately
+
+<Warning>
+Shift+Click deletion is **permanent** and cannot be undone. The file is deleted from R2 immediately.
+</Warning>
+
+### Delete Conditions
+
+| Upload Type | Regular Click | Shift+Click |
+|-------------|---------------|-------------|
+| Demo mode | Removes from history | Removes from history (no R2 delete) |
+| Production | Removes from history | Removes from history + Deletes from R2 |
+
+### Button Tooltip
+
+The trash button shows different tooltips based on mode:
+
+- **Demo**: "Remove"
+- **Production**: "Remove (Shift+click to delete from cloud)"
+
+## Clearing All History
+
+Click the **Clear** button in the section header to:
+
+- **Remove all uploads** from the list
+- **Clear localStorage** completely
+- **Reset to empty state**: "No uploads yet"
+
+<Note>
+Clearing history does NOT delete files from R2 or your local disk. It only clears the UI list.
+</Note>
+
+## Upload Item Metadata
+
+Each upload item stores comprehensive metadata (from `App.tsx:40-49`):
+
+```typescript
+interface UploadItem {
+  id: string;           // Timestamp-based unique ID
+  name: string;         // Display name (e.g., "photo.webp")
+  size: string;         // Human-readable size (e.g., "2.3 MB")
+  url: string;          // Public URL or file:// path
+  localPath?: string;   // Local file path (demo mode only)
+  r2Key?: string;       // R2 object key (production only)
+  isDemo: boolean;      // Demo mode flag
+  timestamp: number;    // Upload timestamp
+}
+```
+
+### Metadata Usage
+
+- **id**: Used for React key and deletion
+- **name**: Displayed in the list
+- **size**: Shows processed file size
+- **url**: Copied to clipboard (production)
+- **localPath**: Copied to clipboard (demo) and used for Finder reveal
+- **r2Key**: Used for shift+click deletion from R2
+- **isDemo**: Controls icon display and delete behavior
+- **timestamp**: Used for sorting (newest first)
+
+## Empty State
+
+When you have no uploads, the list shows:
+
+```
+No uploads yet
+```
+
+This appears when:
+- Fresh installation
+- After clicking "Clear"
+- When localStorage is empty/cleared
+
+## Storage Limits
+
+From `App.tsx:12`:
+
+```typescript
+const MAX_RECENT_UPLOADS = 10;
+```
+
+When you upload the 11th file:
+- The **oldest upload is removed** automatically
+- The **new upload appears at the top**
+- Total count stays at 10
+
+This is implemented in `App.tsx:225-228`:
+
+```typescript
+setUploads(prev => {
+  const updated = [newUpload, ...prev].slice(0, MAX_RECENT_UPLOADS);
+  return updated;
+});
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Keyboard Shortcuts" icon="keyboard" href="/guides/keyboard-shortcuts">
+    Learn all keyboard controls
+  </Card>
+  <Card title="Configuration" icon="gear" href="/configuration/cloudflare-r2-setup">
+    Set up Cloudflare R2 for production uploads
+  </Card>
+</CardGroup>

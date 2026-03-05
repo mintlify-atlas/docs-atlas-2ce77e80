@@ -1,0 +1,261 @@
+---
+title: Keyboard Shortcuts
+description: Master ZipDrop's keyboard controls for efficient file uploading
+---
+
+## Main Window Shortcuts
+
+ZipDrop has minimal keyboard shortcuts to keep interactions simple and focused.
+
+### ESC - Hide Window
+
+<Card title="Press ESC to hide the window instantly" icon="keyboard">
+  The most important shortcut in ZipDrop. Press `ESC` at any time to hide the window without quitting the app.
+</Card>
+
+#### Implementation
+
+From `App.tsx:260-266`:
+
+```tsx
+const handleKeyDown = (e: KeyboardEvent) => {
+  if (e.key === "Escape") {
+    getCurrentWindow().hide();
+  }
+};
+
+window.addEventListener("keydown", handleKeyDown);
+```
+
+#### When to Use ESC
+
+- **After uploading** - Quick exit without waiting for auto-hide
+- **Cancel drag operation** - Changed your mind while dragging
+- **Quick dismissal** - Fastest way to hide the window
+- **Muscle memory** - Works like most macOS popovers
+
+<Tip>
+ESC works from any state - idle, processing, success, or error. It's always available.
+</Tip>
+
+## Menu Bar Interactions
+
+The ZipDrop menu bar icon supports both click types:
+
+### Left Click - Toggle Window
+
+**Action**: Show/hide the main window
+
+From `main.rs:288-314`:
+
+```rust
+if let TrayIconEvent::Click {
+    button: MouseButton::Left,
+    button_state: MouseButtonState::Up,
+    rect,
+    ..
+} = event
+{
+    // Calculate position below menu bar icon
+    let x = tray_pos.x - (window_width / 2) + (tray_size.width / 2);
+    let y = tray_pos.y + tray_size.height + 4;
+    
+    // Toggle visibility
+    if window.is_visible() {
+        window.hide();
+    } else {
+        window.show();
+        window.set_focus();
+    }
+}
+```
+
+#### Window Positioning
+
+The window is **intelligently positioned** below the menu bar icon:
+- **Centered horizontally** under the icon
+- **4 pixels gap** below the icon
+- **Consistent placement** every time
+
+### Right Click - Menu
+
+**Action**: Show context menu with options
+
+Menu items (from `main.rs:273-278`):
+
+- **Version X.X.X** - Display only, shows current version
+- **Check for Updates...** - Opens GitHub releases page
+- **Separator** - Visual divider
+- **Quit ZipDrop** (`Cmd+Q`) - Exit the application
+
+## Menu Item Shortcuts
+
+### Cmd+Q - Quit Application
+
+- **Appears in**: Tray menu
+- **Action**: Completely quits ZipDrop
+- **Standard**: macOS convention for app quit
+
+From `main.rs:277`:
+
+```rust
+let quit_item = MenuItem::with_id(
+    app, 
+    "quit", 
+    "Quit ZipDrop", 
+    true, 
+    Some("CmdOrCtrl+Q")
+)?;
+```
+
+## Mouse Interactions
+
+### Drag and Drop
+
+While not a keyboard shortcut, drag-and-drop is the primary interaction:
+
+<Steps>
+  <Step title="Drag files from Finder">
+    ZipDrop listens for the `tauri://drag-over` event and shows "Drop to upload" state.
+  </Step>
+  
+  <Step title="Drop files on the window">
+    Triggers `tauri://drag-drop` event with file paths, starting the upload process.
+  </Step>
+  
+  <Step title="Drag leave without dropping">
+    `tauri://drag-leave` event returns window to idle state.
+  </Step>
+</Steps>
+
+From `App.tsx:269-291`:
+
+```tsx
+const dropListener = listen<TauriDropEvent>("tauri://drag-drop", (event) => {
+  if (event.payload.paths?.length > 0) {
+    processFiles(event.payload.paths);
+  }
+});
+
+const dragOverListener = listen("tauri://drag-over", (event) => {
+  if (!isProcessing.current) {
+    setState("drag-over");
+  }
+});
+
+const dragLeaveListener = listen("tauri://drag-leave", (event) => {
+  if (!isProcessing.current) {
+    setState("idle");
+  }
+});
+```
+
+### Upload Item Clicks
+
+In the Recent uploads list:
+
+- **Click item**: Copy URL/path to clipboard
+- **Click copy button**: Explicit copy action
+- **Click open button**: Open in Finder (demo) or browser (production)
+- **Click trash**: Remove from history
+- **Shift+Click trash**: Remove + delete from R2 (production only)
+
+## No Traditional Shortcuts
+
+ZipDrop intentionally avoids complex keyboard shortcuts because:
+
+1. **Menu bar app** - Not always focused
+2. **Drag-and-drop primary** - Mouse interaction is the main workflow
+3. **Simple UX** - One key (ESC) is memorable
+4. **macOS conventions** - Cmd+Q is standard
+
+<Note>
+ZipDrop prioritizes **simplicity** over feature density. The goal is instant uploads, not keyboard mastery.
+</Note>
+
+## Focus Management
+
+From `App.tsx:148-150`:
+
+```tsx
+useEffect(() => {
+  window.focus();
+}, []);
+```
+
+The window **automatically receives focus** on mount to ensure:
+- ESC shortcut works immediately
+- Keyboard events are captured
+- Drag events are received
+
+## Auto-Hide Behavior
+
+While not triggered by keyboard, the auto-hide timer is important:
+
+- **Triggered**: 10 seconds after successful upload
+- **From**: `App.tsx:241-244`
+- **Override**: Press ESC to hide immediately
+
+```tsx
+setTimeout(() => {
+  console.log("Auto-hiding window after 10 seconds");
+  getCurrentWindow().hide();
+}, 10000);
+```
+
+<Tip>
+The 10-second delay gives you time to review the upload before the window disappears. Press ESC if you want to hide sooner.
+</Tip>
+
+## Disabled Auto-Hide on Blur
+
+From `main.rs:332-333`:
+
+```rust
+// Note: Auto-hide on blur disabled to allow drag-and-drop from Finder
+// Users can click the tray icon again or press Escape to close
+```
+
+The window **does NOT hide when it loses focus** because:
+- Allows dragging files from Finder without the window disappearing
+- Prevents accidental closure mid-operation
+- Users can explicitly close with ESC or menu bar click
+
+## Keyboard Event Cleanup
+
+ZipDrop properly cleans up event listeners (from `App.tsx:297-302`):
+
+```tsx
+return () => {
+  window.removeEventListener("keydown", handleKeyDown);
+  dropListener.then(fn => fn());
+  dragOverListener.then(fn => fn());
+  dragLeaveListener.then(fn => fn());
+};
+```
+
+This prevents:
+- Memory leaks
+- Duplicate event handlers
+- Stale closures
+
+## Summary of All Shortcuts
+
+| Shortcut | Action | Context |
+|----------|--------|----------|
+| `ESC` | Hide window | Main window, always available |
+| `Cmd+Q` | Quit app | Tray menu |
+| Left Click | Toggle window | Menu bar icon |
+| Right Click | Show menu | Menu bar icon |
+| Shift+Click | Delete from R2 | Trash button (production uploads) |
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="First Upload" icon="upload" href="/guides/first-upload">
+    Learn the complete upload workflow
+  </Card>
+  <Card title="Managing Uploads" icon="list" href="/guides/managing-uploads">
+    Explore the upload history features
+  </Card>
+</CardGroup>

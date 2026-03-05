@@ -1,0 +1,321 @@
+---
+title: Demo Mode
+description: Test ZipDrop locally without cloud configuration
+---
+
+Demo Mode lets you use ZipDrop's file processing features without configuring Cloudflare R2. Perfect for testing, local development, or offline use.
+
+## What is Demo Mode?
+
+When Demo Mode is enabled:
+
+- ✅ All file processing works normally (WebP conversion, ZIP creation)
+- ✅ Files are saved to `~/Downloads/ZipDrop`
+- ✅ No cloud upload happens
+- ✅ No R2 credentials required
+- ✅ Works completely offline
+
+<Note>
+Demo Mode is **enabled by default** when you first launch ZipDrop.
+</Note>
+
+## Default Configuration
+
+Demo Mode is the default setting:
+
+```rust
+impl Default for AppSettings {
+    fn default() -> Self {
+        Self {
+            demo_mode: true, // Demo mode ON by default
+            demo_output_dir: None,
+        }
+    }
+}
+```
+
+From `config.rs:45-52`
+
+## Output Directory
+
+Processed files are saved to:
+
+```
+~/Downloads/ZipDrop/
+```
+
+The directory is created automatically:
+
+```rust
+pub fn get_demo_output_dir() -> Result<PathBuf, String> {
+    let downloads = dirs::download_dir()
+        .or_else(dirs::home_dir)
+        .ok_or_else(|| "Could not find downloads directory".to_string())?;
+    
+    let demo_dir = downloads.join("ZipDrop");
+    fs::create_dir_all(&demo_dir)
+        .map_err(|e| format!("Failed to create demo directory: {}", e))?;
+    
+    Ok(demo_dir)
+}
+```
+
+From `config.rs:247-257`
+
+<Tip>
+You can quickly access saved files by clicking the folder icon next to any upload in the Recent list.
+</Tip>
+
+## Enabling Demo Mode
+
+### Via Settings Panel
+
+1. Click the settings icon (⚙️)
+2. Toggle **Demo Mode** to ON
+3. The app will immediately start saving files locally
+
+### Via Code
+
+```typescript
+const toggleDemoMode = async () => {
+  const newMode = !configStatus.demo_mode;
+  await invoke("set_demo_mode", { enabled: newMode });
+  setConfigStatus(prev => ({ ...prev, demo_mode: newMode }));
+};
+```
+
+From `App.tsx:336-340`
+
+## How It Works
+
+When processing files in Demo Mode:
+
+1. **File Processing**: Same as normal (WebP conversion, ZIP creation)
+2. **Local Save**: File is saved to `~/Downloads/ZipDrop`
+3. **Path Return**: Local file path is returned instead of R2 URL
+4. **Clipboard**: Full local path is copied to clipboard
+5. **Recent List**: Shows "Local" badge
+
+### Demo Result Structure
+
+```typescript
+interface DropResult {
+  url: string;              // Local file path in demo mode
+  local_path: string | null; // Full path to file
+  r2_key: string | null;     // null in demo mode
+  original_size: number;
+  processed_size: number;
+  file_type: string;
+  is_demo: boolean;          // true
+}
+```
+
+From `App.tsx:51-59`
+
+## UI Indicators
+
+Demo Mode is clearly indicated in the UI:
+
+### Header Badge
+```tsx
+{configStatus.demo_mode && <span className="demo-badge">Demo</span>}
+```
+
+### Drop Zone Hint
+```tsx
+<div className="drop-subtext">
+  Images → WebP • Multiple → ZIP
+  {configStatus.demo_mode && " • Saves locally"}
+</div>
+```
+
+### Recent List Badge
+```tsx
+{item.isDemo && <span className="item-badge">Local</span>}
+```
+
+From `App.tsx:372-420`
+
+## File Management
+
+### Opening Files
+
+Click the folder icon to reveal the file in Finder:
+
+```typescript
+const openUrl = (url: string, localPath?: string) => {
+  if (localPath) {
+    invoke("reveal_in_finder", { path: localPath });
+  } else {
+    invoke("open_in_browser", { url });
+  }
+};
+```
+
+From `App.tsx:313-319`
+
+### Copying Paths
+
+Click any upload to copy the full file path:
+
+```typescript
+const copyUrl = async (url: string) => {
+  try {
+    await invoke("copy_to_clipboard", { text: url });
+  } catch {
+    navigator.clipboard.writeText(url);
+  }
+};
+```
+
+From `App.tsx:305-311`
+
+### Deleting Files
+
+Click the trash icon to remove from Recent list. In Demo Mode:
+- File is **not** deleted from disk
+- Only removed from the UI
+- Actual file remains in `~/Downloads/ZipDrop`
+
+<Warning>
+Shift+clicking the trash icon has no effect in Demo Mode (only works for R2 uploads).
+</Warning>
+
+## Storage Limits
+
+Demo Mode has the same processing limits:
+
+| Limit | Value |
+|-------|-------|
+| Max Files | 50 |
+| Max Single File | 500 MB |
+| Max Total Size | 1 GB |
+
+From `processor.rs:9-11`
+
+## Transitioning to Production
+
+When you're ready to use R2:
+
+1. **Configure R2 credentials** in Settings
+2. **Test credentials** with the "Test Credentials" button
+3. **Disable Demo Mode** toggle
+4. **Save settings**
+
+Your existing local files remain untouched. New uploads will go to R2.
+
+## Use Cases
+
+### Testing
+
+```bash
+# Test WebP conversion without uploading
+# 1. Enable Demo Mode
+# 2. Drop a PNG file
+# 3. Check ~/Downloads/ZipDrop for converted WebP
+```
+
+### Offline Work
+
+```bash
+# Process files without internet
+# 1. Leave Demo Mode enabled
+# 2. Drop files anytime
+# 3. Files saved locally, no cloud required
+```
+
+### Development
+
+```bash
+# Develop integrations without R2
+# 1. Enable Demo Mode
+# 2. Test file processing logic
+# 3. Access files from ~/Downloads/ZipDrop
+```
+
+## Recent List
+
+Demo uploads appear in the Recent list:
+
+```tsx
+const newUpload: UploadItem = {
+  id: Date.now().toString(),
+  name: displayName,
+  size: formatBytes(result.processed_size),
+  url: result.url,
+  localPath: result.local_path || undefined,
+  r2Key: result.r2_key || undefined,
+  isDemo: result.is_demo, // true in demo mode
+  timestamp: Date.now(),
+};
+```
+
+From `App.tsx:211-220`
+
+<Note>
+The Recent list stores up to 10 uploads in localStorage, regardless of mode.
+</Note>
+
+## Settings UI
+
+When Demo Mode is enabled:
+
+```tsx
+const isDisabled = configStatus.demo_mode;
+
+// All R2 input fields are disabled
+<input 
+  type="text" 
+  value={accessKey} 
+  disabled={isDisabled} 
+/>
+```
+
+```tsx
+{isDisabled && <span className="form-hint">
+  Disable Demo Mode to edit R2 settings
+</span>}
+```
+
+From `App.tsx:544-614`
+
+This prevents accidental credential entry while testing locally.
+
+## Configuration Storage
+
+Demo Mode state is persisted:
+
+```rust
+pub fn save_settings(settings: &AppSettings) -> Result<(), String> {
+    let settings_path = get_settings_path()?;
+    let json = serde_json::to_string_pretty(settings)?;
+    fs::write(&settings_path, json)?;
+    Ok(())
+}
+```
+
+Stored at: `~/.config/zipdrop/settings.json`
+
+From `config.rs:220-228`
+
+## FAQ
+
+<Accordion title="Can I use Demo Mode permanently?">
+Yes! Demo Mode is a fully functional local file processor. You never need to configure R2 if you don't want cloud uploads.
+</Accordion>
+
+<Accordion title="Where exactly are files saved?">
+Files are saved to `~/Downloads/ZipDrop` on macOS. The full path is typically `/Users/yourname/Downloads/ZipDrop`.
+</Accordion>
+
+<Accordion title="Does Demo Mode process files the same way?">
+Yes! Image conversion, ZIP creation, and all validation logic is identical. Only the upload step is skipped.
+</Accordion>
+
+<Accordion title="Can I change the output directory?">
+Currently no, but the source code can be modified. The directory is hardcoded to `~/Downloads/ZipDrop` in `config.rs:252`.
+</Accordion>
+
+<Accordion title="Will my R2 credentials be used in Demo Mode?">
+No. When Demo Mode is enabled, R2 upload code is completely skipped. Your credentials are never accessed.
+</Accordion>
